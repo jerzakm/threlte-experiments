@@ -1,6 +1,13 @@
 <script lang="ts">
 	import '../app.postcss';
 	import '../styles/global.css';
+
+	const nav = [
+		{
+			name: '3D fantasy cards.',
+			href: '01_card-deck'
+		}
+	];
 </script>
 
 <nav class="drawer drawer-mobile">
@@ -16,9 +23,10 @@
 	<nav class="drawer-side">
 		<label for="my-drawer-2" class="drawer-overlay" />
 		<ul class="menu p-4 overflow-y-auto w-80 bg-base-100 text-base-content">
-			<!-- Sidebar content here -->
-			<li><a>Sidebar Item 1</a></li>
-			<li><a>Sidebar Item 2</a></li>
+			<h1 class="font-bold text-lg">Stuff made with Threlte:</h1>
+			{#each nav as { name, href }}
+				<li><a {href}>{name}</a></li>
+			{/each}
 		</ul>
 	</nav>
 </nav>
