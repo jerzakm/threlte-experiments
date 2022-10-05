@@ -36,7 +36,7 @@
 <!-- Cards in hand, rendered right in front of the camera -->
 <InHand>
 	{#each cardsInHand as card, i}
-		<Card />
+		<Card inHand={true} />
 	{/each}
 </InHand>
 
