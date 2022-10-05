@@ -1,25 +1,28 @@
 <script lang="ts">
-	import { Group, Mesh, useFrame, useTexture } from '@threlte/core';
-	import { spring } from 'svelte/motion';
-	import {
-		BoxGeometry,
-		DoubleSide,
-		MeshLambertMaterial,
-		MeshStandardMaterial,
-		PlaneGeometry,
-		ShaderMaterial,
-		Vector3,
-		Vector4
-	} from 'three';
+	import { MeshInstance, useFrame, useTexture } from '@threlte/core';
+	import { BoxGeometry, Mesh, MeshLambertMaterial, ShaderMaterial, Vector4 } from 'three';
+
+	import { useCursor } from '@threlte/extras';
 
 	import { default as vertexShader } from '$lib/shaders/standardVertex.glsl?raw';
 	import { default as fragmentShader } from './fireFrag.glsl?raw';
-	import { get } from 'svelte/store';
-
-	const scale = spring(1);
 
 	const texture = useTexture('assets/cards/card fantasy golden shaded.png');
 	const textureBack = useTexture('assets/cards/card fantasy back.png');
+
+	export let position = { x: 0, y: 0, z: 0 };
+	export let rotation = { x: 0, y: 0, z: 0 };
+	export let flipped = false;
+
+	import { cubicOut } from 'svelte/easing';
+	import { tweened } from 'svelte/motion';
+	import { DEG2RAD } from 'three/src/math/MathUtils';
+	const flipMod = tweened(0, {
+		duration: 300,
+		easing: cubicOut
+	});
+
+	$: flipped ? ($flipMod = 1) : ($flipMod = 0);
 
 	const material = new ShaderMaterial({
 		uniforms: {
@@ -44,7 +47,7 @@
 	const backMaterial = new MeshLambertMaterial({
 		map: textureBack
 	});
-
+	const geometry = new BoxGeometry(0.744, 1.039, 0.001);
 	const materials = [
 		backMaterial,
 		backMaterial,
@@ -54,25 +57,21 @@
 		backMaterial
 	];
 
-	let currentPosition = new Vector3();
-
+	const mesh = new Mesh(geometry, materials);
+	const { hovering, onPointerEnter, onPointerLeave } = useCursor();
 	useFrame(({ camera, clock }) => {
-		const cam = get(camera);
-		currentPosition = cam.position;
-
+		// shader material update
 		material.uniforms.time.value = clock.elapsedTime;
 		material.uniforms.resolution.value = new Vector4(window.innerWidth, window.innerHeight, 1, 1);
 	});
-	const geometry = new BoxGeometry(0.744, 1.039, 0.001);
 </script>
 
-<Mesh
-	scale={$scale}
+<MeshInstance
 	interactive
-	on:pointerenter={() => ($scale = 1.2)}
-	on:pointerleave={() => ($scale = 1)}
-	position={{ y: 0.75 }}
-	castShadow
-	{geometry}
-	material={materials}
+	{mesh}
+	position={{ x: position.x, y: position.y + 0 * $flipMod, z: position.z }}
+	rotation={{ x: rotation.x, y: rotation.y + DEG2RAD * 180 * $flipMod, z: rotation.z }}
+	on:click
+	on:pointerenter={onPointerEnter}
+	on:pointerleave={onPointerLeave}
 />
