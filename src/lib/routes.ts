@@ -6,5 +6,9 @@ export const routes = [
 	{
 		name: 'Better fog',
 		href: '/02_better-fog'
+	},
+	{
+		name: 'Envmap component',
+		href: '/03_env-component'
 	}
 ];
