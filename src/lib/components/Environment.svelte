@@ -23,11 +23,12 @@
 			const loader = new CubeTextureLoader();
 			loader.setPath(path || '');
 
-			const textureCube = loader.load(files);
-			textureCube.encoding = sRGBEncoding;
-
-			scene.environment = textureCube;
-			if (isBackground) scene.background = textureCube;
+			loader.load(files, (texture) => {
+				texture.encoding = sRGBEncoding;
+				scene.environment = texture;
+				if (isBackground) scene.background = texture;
+				invalidate();
+			});
 		} else {
 			const textureEquirec = useTexture(`${path || ''}${files}`);
 			textureEquirec.mapping = EquirectangularReflectionMapping;
