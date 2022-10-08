@@ -14,22 +14,21 @@
 	<OrbitControls autoRotate={false} enableZoom={true} target={{ x: 0, y: 0, z: 0 }} />
 </PerspectiveCamera>
 
-<!-- <Environment
-	path={'03_env/milkyway_cube/'}
-	files={[
-		'dark-s_nx.jpg',
-		'dark-s_ny.jpg',
-		'dark-s_nz.jpg',
-		'dark-s_px.jpg',
-		'dark-s_py.jpg',
-		'dark-s_pz.jpg'
-	]}
-	isCubeMap
-	isBackground
-/> -->
-
 {#if env}
-	<Environment path={'03_env/'} files={'equirect_ruined_room.jpg'} isBackground />
+	<Environment
+		path={'03_env/milkyway_cube/'}
+		files={[
+			'dark-s_nx.jpg',
+			'dark-s_ny.jpg',
+			'dark-s_nz.jpg',
+			'dark-s_px.jpg',
+			'dark-s_py.jpg',
+			'dark-s_pz.jpg'
+		]}
+		isCubeMap
+		isBackground
+	/>
+	<!-- <Environment path={'03_env/'} files={'equirect_ruined_room.jpg'} isBackground /> -->
 {/if}
 
 <Group>
