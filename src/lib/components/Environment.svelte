@@ -1,7 +1,14 @@
 <script lang="ts">
-	import { useTexture, useThrelte } from '@threlte/core';
+	import { DisposableObject, useTexture, useThrelte } from '@threlte/core';
 	import { onMount, onDestroy } from 'svelte';
-	import { CubeTextureLoader, EquirectangularReflectionMapping, sRGBEncoding } from 'three';
+	import {
+		CubeTexture,
+		CubeTextureLoader,
+		EquirectangularReflectionMapping,
+		sRGBEncoding,
+		Texture,
+		TextureLoader
+	} from 'three';
 
 	export let path: string | undefined;
 	export let files: string | [string, string, string, string, string, string];
@@ -15,7 +22,24 @@
 
 	const { scene, invalidate } = useThrelte();
 
-	onMount(() => {
+	$: envPath = `${path || ''}${files}`;
+	let previousEnvPath: string = ``;
+
+	$: console.log(envPath);
+
+	let envTexture: CubeTexture | Texture | undefined;
+
+	$: {
+		if (envPath != previousEnvPath) {
+			if (envTexture) {
+				envTexture.dispose();
+			}
+			loadEnv();
+			previousEnvPath = envPath;
+		}
+	}
+
+	const loadEnv = () => {
 		if (isCubeMap) {
 			if (!Array.isArray(files))
 				throw new Error(`Files ${files} provided for a cubemap are not an Array.`);
@@ -23,24 +47,27 @@
 			const loader = new CubeTextureLoader();
 			loader.setPath(path || '');
 
-			loader.load(files, (texture) => {
+			envTexture = loader.load(files, (texture) => {
 				texture.encoding = sRGBEncoding;
 				scene.environment = texture;
 				if (isBackground) scene.background = texture;
-				invalidate();
+				invalidate('Cube texture Environment loaded');
 			});
 		} else {
-			const textureEquirec = useTexture(`${path || ''}${files}`);
-			textureEquirec.mapping = EquirectangularReflectionMapping;
-			textureEquirec.encoding = sRGBEncoding;
-			scene.environment = textureEquirec;
-			if (isBackground) scene.background = textureEquirec;
+			envTexture = new TextureLoader().load(`${path || ''}${files}`, (textureEquirec) => {
+				textureEquirec.mapping = EquirectangularReflectionMapping;
+				textureEquirec.encoding = sRGBEncoding;
+				scene.environment = textureEquirec;
+				if (isBackground) scene.background = textureEquirec;
+				invalidate('Equirectangular Environment loaded');
+			});
 		}
-	});
+	};
 
 	onDestroy(() => {
 		scene.environment = null;
 		scene.background = null;
-		invalidate();
+		if (envTexture) envTexture.dispose();
+		invalidate('Environment destroyed');
 	});
 </script>
