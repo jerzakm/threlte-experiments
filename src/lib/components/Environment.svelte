@@ -37,6 +37,8 @@
 			loadEnv();
 			previousEnvPath = envPath;
 		}
+
+		// todo, react to isBackground prop change
 	}
 
 	const loadEnv = () => {
@@ -47,11 +49,12 @@
 			const loader = new CubeTextureLoader();
 			loader.setPath(path || '');
 
-			envTexture = loader.load(files, (texture) => {
-				texture.encoding = sRGBEncoding;
-				scene.environment = texture;
-				if (isBackground) scene.background = texture;
+			envTexture = loader.load(files, (textureCube) => {
+				textureCube.encoding = sRGBEncoding;
+				scene.environment = textureCube;
+				if (isBackground) scene.background = textureCube;
 				invalidate('Cube texture Environment loaded');
+				envTexture = textureCube;
 			});
 		} else {
 			envTexture = new TextureLoader().load(`${path || ''}${files}`, (textureEquirec) => {
@@ -60,6 +63,7 @@
 				scene.environment = textureEquirec;
 				if (isBackground) scene.background = textureEquirec;
 				invalidate('Equirectangular Environment loaded');
+				envTexture = textureEquirec;
 			});
 		}
 	};
