@@ -28,8 +28,7 @@
 			min: 500,
 			max: 1000000,
 			step: 100
-		},
-		axes: 'xzy'
+		}
 
 		// functions become buttons. if state is returned, it will
 		// update the store
@@ -47,7 +46,6 @@
 				size2={$controls.size2}
 				color={$controls.color}
 				distance={$controls.distance}
-				axes={$controls.axes}
 			/>
 		{/if}
 		<Scene />

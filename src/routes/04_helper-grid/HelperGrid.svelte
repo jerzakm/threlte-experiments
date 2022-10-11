@@ -105,7 +105,7 @@
 	const mesh = new Mesh(geometry, material);
 	mesh.frustumCulled = false;
 
-	$: mesh.material = makeGridMaterial(axes);
+	// $: mesh.material = makeGridMaterial(axes);
 
 	$: updateUniforms(color, size1, size2, distance);
 

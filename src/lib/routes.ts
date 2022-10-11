@@ -10,5 +10,9 @@ export const routes = [
 	{
 		name: 'Envmap component',
 		href: '/03_env-component'
+	},
+	{
+		name: 'Helper grid',
+		href: '/04_helper-grid'
 	}
 ];
