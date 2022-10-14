@@ -24,9 +24,6 @@
 
 	$: envPath = `${path || ''}${files}`;
 	let previousEnvPath: string = ``;
-
-	$: console.log(envPath);
-
 	let envTexture: CubeTexture | Texture | undefined;
 
 	$: {
@@ -38,7 +35,14 @@
 			previousEnvPath = envPath;
 		}
 
-		// todo, react to isBackground prop change
+		if (!isBackground && scene.background) {
+			scene.background = null;
+			invalidate('Removing Environment as scene.background');
+		}
+		if (isBackground && !scene.background && envTexture) {
+			scene.background = envTexture;
+			invalidate('Adding Environment as scene.background');
+		}
 	}
 
 	const loadEnv = () => {
@@ -52,6 +56,7 @@
 			envTexture = loader.load(files, (textureCube) => {
 				textureCube.encoding = sRGBEncoding;
 				scene.environment = textureCube;
+
 				if (isBackground) scene.background = textureCube;
 				invalidate('Cube texture Environment loaded');
 				envTexture = textureCube;
