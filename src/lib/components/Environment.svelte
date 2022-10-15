@@ -14,11 +14,13 @@
 		TextureLoader
 	} from 'three';
 	import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
+	import { GroundProjectedEnv } from 'three/examples/jsm/objects/GroundProjectedEnv.js';
 
 	export let path: string | undefined;
 	export let files: string | string[];
 	export let isCubeMap: boolean = false;
 	export let isBackground: boolean | undefined = undefined;
+	export let groundProjection: { radius: number; height: number } | undefined = undefined;
 
 	export let format: 'ldr' | 'hdr' | 'exr' = 'ldr';
 	// export let ground -- ground envmap implementation with radius and height (threejs addon)
@@ -28,9 +30,12 @@
 	$: envPath = `${path || ''}${files}`;
 
 	let previousEnvPath: string = ``;
-	let envTexture: Texture;
+	let processedEnv: Texture;
+	let envMap: Texture;
 
 	let currentFormat = '';
+
+	let groundEnv: any;
 
 	const loadEnv = () => {
 		// pmrem gen for cube and equirect
@@ -52,17 +57,19 @@
 					new CubeTextureLoader()
 						.setPath(path || '')
 						.load(files, (textureCube) => {
+							envMap = textureCube;
 							textureCube.encoding = sRGBEncoding;
-							envTexture = pmremGenerator.fromCubemap(textureCube).texture;
+							processedEnv = pmremGenerator.fromCubemap(textureCube).texture;
 							setEnvironment();
 						})
 						.dispose();
 				} else {
 					new TextureLoader()
 						.load(`${path || ''}${files}`, (textureEquirec) => {
+							envMap = textureEquirec;
 							textureEquirec.mapping = EquirectangularReflectionMapping;
 							textureEquirec.encoding = sRGBEncoding;
-							envTexture = pmremGenerator.fromEquirectangular(textureEquirec).texture;
+							processedEnv = pmremGenerator.fromEquirectangular(textureEquirec).texture;
 							setEnvironment();
 						})
 						.dispose();
@@ -70,7 +77,8 @@
 				}
 			case 'hdr':
 				const hdrCubeMap = new HDRCubeTextureLoader().setPath(path || '').load(files, function () {
-					envTexture = pmremGenerator.fromCubemap(hdrCubeMap).texture;
+					envMap = hdrCubeMap;
+					processedEnv = pmremGenerator.fromCubemap(hdrCubeMap).texture;
 					hdrCubeMap.magFilter = LinearFilter;
 					setEnvironment();
 				});
@@ -78,7 +86,8 @@
 			case 'exr':
 				new EXRLoader()
 					.load(`${path || ''}${files}`, function (texture) {
-						envTexture = pmremGenerator.fromEquirectangular(texture).texture;
+						envMap = texture;
+						processedEnv = pmremGenerator.fromEquirectangular(texture).texture;
 						setEnvironment();
 					})
 					.dispose();
@@ -88,15 +97,26 @@
 	};
 
 	const setEnvironment = () => {
-		scene.environment = envTexture;
-		if (isBackground) scene.background = envTexture;
+		scene.environment = processedEnv;
+		if (isBackground) scene.background = processedEnv;
+		if (groundProjection) enableGroundEnv();
 		invalidate();
+	};
+
+	const enableGroundEnv = () => {
+		if (groundProjection) {
+			groundEnv = new GroundProjectedEnv(envMap);
+			groundEnv.scale.setScalar(100);
+			groundEnv.radius = groundProjection.radius;
+			groundEnv.height = groundProjection.height;
+			scene.add(groundEnv);
+		}
 	};
 
 	$: {
 		if (envPath != previousEnvPath || format != currentFormat) {
-			if (envTexture) {
-				envTexture.dispose();
+			if (processedEnv) {
+				processedEnv.dispose();
 			}
 			console.log(envPath, previousEnvPath);
 			loadEnv();
@@ -108,16 +128,30 @@
 			scene.background = null;
 			invalidate('Removing Environment as scene.background');
 		}
-		if (isBackground && !scene.background && envTexture) {
-			scene.background = envTexture;
+		if (isBackground && !scene.background && processedEnv) {
+			scene.background = processedEnv;
 			invalidate('Adding Environment as scene.background');
+		}
+		if (groundEnv && groundProjection) {
+			groundEnv.radius = groundProjection.radius;
+			groundEnv.height = groundProjection.height;
+			invalidate();
+		}
+
+		if (groundEnv && !groundProjection) {
+			scene.remove(groundEnv);
+			invalidate('Disabling ground projected environment');
+		}
+		if (!groundEnv && groundProjection && envMap) {
+			enableGroundEnv();
+			invalidate('Enabling ground projected environment');
 		}
 	}
 
 	onDestroy(() => {
 		scene.environment = null;
 		scene.background = null;
-		if (envTexture) envTexture.dispose();
+		if (processedEnv) processedEnv.dispose();
 		invalidate('Environment destroyed');
 	});
 </script>

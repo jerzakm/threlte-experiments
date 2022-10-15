@@ -7,7 +7,7 @@
 	let path = '03_env/';
 	let files: string | [string, string, string, string, string, string] = 'equirect_ruined_room.jpg';
 	let isCubeMap = false;
-	let format = 'ldr';
+	let format: 'ldr' | 'hdr' | 'exr' | undefined = 'ldr';
 
 	const controls = knobby.panel({
 		// labelled control panels are collapsible
@@ -15,6 +15,24 @@
 
 		environmentEnabled: true,
 		isBackground: true,
+		groundProjection: {
+			$label: 'Ground projected environment mapping',
+			enabled: true,
+			height: {
+				$label: 'height',
+				value: 10,
+				min: 1,
+				max: 100,
+				step: 1
+			},
+			radius: {
+				$label: 'radius',
+				value: 400,
+				min: 1,
+				max: 1000,
+				step: 1
+			}
+		},
 
 		// functions become buttons. if state is returned, it will
 		// update the store
@@ -51,7 +69,19 @@
 <wrapper class="relative h-full">
 	<Canvas>
 		{#if $controls.environmentEnabled}
-			<Environment {path} {files} isBackground={$controls.isBackground} {isCubeMap} {format} />
+			<Environment
+				{path}
+				{files}
+				isBackground={$controls.isBackground}
+				{isCubeMap}
+				{format}
+				groundProjection={$controls.groundProjection.enabled
+					? {
+							radius: $controls.groundProjection.radius,
+							height: $controls.groundProjection.height
+					  }
+					: undefined}
+			/>
 		{/if}
 		<Scene />
 	</Canvas>
