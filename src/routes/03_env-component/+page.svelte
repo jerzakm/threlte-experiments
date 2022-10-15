@@ -7,6 +7,7 @@
 	let path = '03_env/';
 	let files: string | [string, string, string, string, string, string] = 'equirect_ruined_room.jpg';
 	let isCubeMap = false;
+	let format = 'ldr';
 
 	const controls = knobby.panel({
 		// labelled control panels are collapsible
@@ -19,31 +20,38 @@
 		// update the store
 		cubicJpgScene: () => {
 			isCubeMap = true;
-			path = '03_env/milkyway_cube/';
-			files = [
-				'dark-s_nx.jpg',
-				'dark-s_ny.jpg',
-				'dark-s_nz.jpg',
-				'dark-s_px.jpg',
-				'dark-s_py.jpg',
-				'dark-s_pz.jpg'
-			];
+			path = '/03_env/Bridge2_cube/';
+			files = ['posx.jpg', 'negx.jpg', 'posy.jpg', 'negy.jpg', 'posz.jpg', 'negz.jpg'];
+			format = 'ldr';
 		},
 		equirectJpgScene: () => {
 			isCubeMap = false;
-			path = '03_env/';
+			path = '/03_env/';
 			files = 'equirect_ruined_room.jpg';
+			format = 'ldr';
+		},
+
+		equirectExrScene: () => {
+			isCubeMap = false;
+			path = '/03_env/';
+			files = 'piz_compressed.exr';
+			format = 'exr';
+		},
+		cubicHdrScene: () => {
+			isCubeMap = true;
+			path = '/03_env/pisaHDR/';
+			files = ['px.hdr', 'nx.hdr', 'py.hdr', 'ny.hdr', 'pz.hdr', 'nz.hdr'];
+			format = 'hdr';
 		}
 	});
 
-	// the returned store is writable
-	$controls.message = 'Hello Knobby!';
+	$controls.cubicJpgScene();
 </script>
 
 <wrapper class="relative h-full">
 	<Canvas>
 		{#if $controls.environmentEnabled}
-			<Environment {path} {files} isBackground={$controls.isBackground} {isCubeMap} />
+			<Environment {path} {files} isBackground={$controls.isBackground} {isCubeMap} {format} />
 		{/if}
 		<Scene />
 	</Canvas>
