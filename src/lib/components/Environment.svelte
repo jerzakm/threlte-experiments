@@ -2,125 +2,113 @@
 	import { useThrelte } from '@threlte/core';
 	import { onDestroy } from 'svelte';
 	import { HDRCubeTextureLoader } from 'three/examples/jsm/loaders/HDRCubeTextureLoader';
-
+	import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader';
 	import {
 		CubeTextureLoader,
 		DefaultLoadingManager,
-		EquirectangularReflectionMapping,
-		LinearFilter,
 		PMREMGenerator,
 		sRGBEncoding,
 		Texture,
-		TextureLoader
+		type TextureEncoding,
+		TextureLoader,
+		LinearEncoding
 	} from 'three';
-	import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
 	import { GroundProjectedEnv } from 'three/examples/jsm/objects/GroundProjectedEnv.js';
 
 	export let path: string | undefined;
 	export let files: string | string[];
-	export let isCubeMap: boolean = false;
 	export let isBackground: boolean | undefined = undefined;
 	export let groundProjection: { radius: number; height: number } | undefined = undefined;
-
-	export let format: 'ldr' | 'hdr' | 'exr' = 'ldr';
-	// export let ground -- ground envmap implementation with radius and height (threejs addon)
+	export let format: 'ldr' | 'hdr' = 'ldr';
+	export let encoding: TextureEncoding | undefined = undefined;
 
 	const { scene, invalidate, renderer } = useThrelte();
 
+	$: isCubeMap = Array.isArray(files);
 	$: envPath = `${path || ''}${files}`;
 
 	let previousEnvPath: string = ``;
-	let processedEnv: Texture;
-	let envMap: Texture;
-
+	let currentProcessedEnv: Texture;
+	let currentEnvMap: Texture;
 	let currentFormat = '';
+	let currentGroundEnv: any;
 
-	let groundEnv: any;
+	const pickLoader = () => {
+		if (isCubeMap && format == 'ldr') return new CubeTextureLoader();
+		if (!isCubeMap && format == 'ldr') return new TextureLoader();
+		if (isCubeMap && format == 'hdr') return new HDRCubeTextureLoader();
+		if (!isCubeMap && format == 'hdr') return new RGBELoader();
+		return new TextureLoader();
+	};
 
-	const loadEnv = () => {
-		// pmrem gen for cube and equirect
+	const loadEnvironment = () => {
+		if (!renderer) throw new Error('Threlte renderer undefined');
 		const pmremGenerator = new PMREMGenerator(renderer);
-		isCubeMap
-			? pmremGenerator.compileCubemapShader()
-			: pmremGenerator.compileEquirectangularShader();
 		DefaultLoadingManager.onLoad = function () {
 			pmremGenerator.dispose();
 		};
+		const loader: any = pickLoader();
 
-		switch (format) {
-			case 'ldr':
-				if (isCubeMap) {
-					if (!Array.isArray(files))
-						throw new Error(`Files ${files} provided for a cubemap are not an Array.`);
-
-					console.log(path, files);
-					new CubeTextureLoader()
-						.setPath(path || '')
-						.load(files, (textureCube) => {
-							envMap = textureCube;
-							textureCube.encoding = sRGBEncoding;
-							processedEnv = pmremGenerator.fromCubemap(textureCube).texture;
-							setEnvironment();
-						})
-						.dispose();
-				} else {
-					new TextureLoader()
-						.load(`${path || ''}${files}`, (textureEquirec) => {
-							envMap = textureEquirec;
-							textureEquirec.mapping = EquirectangularReflectionMapping;
-							textureEquirec.encoding = sRGBEncoding;
-							processedEnv = pmremGenerator.fromEquirectangular(textureEquirec).texture;
-							setEnvironment();
-						})
-						.dispose();
-					break;
-				}
-			case 'hdr':
-				const hdrCubeMap = new HDRCubeTextureLoader().setPath(path || '').load(files, function () {
-					envMap = hdrCubeMap;
-					processedEnv = pmremGenerator.fromCubemap(hdrCubeMap).texture;
-					hdrCubeMap.magFilter = LinearFilter;
-					setEnvironment();
-				});
-				break;
-			case 'exr':
-				new EXRLoader()
-					.load(`${path || ''}${files}`, function (texture) {
-						envMap = texture;
-						processedEnv = pmremGenerator.fromEquirectangular(texture).texture;
-						setEnvironment();
-					})
-					.dispose();
-				break;
+		if (isCubeMap) {
+			pmremGenerator.compileCubemapShader();
+			loader.setPath(path || '').load(files, (texture: any) => {
+				currentEnvMap = texture;
+				texture.encoding = encoding || sRGBEncoding;
+				currentProcessedEnv = pmremGenerator.fromCubemap(texture).texture;
+				setEnvironment();
+			});
+		} else {
+			pmremGenerator.compileEquirectangularShader();
+			loader.load(`${path || ''}${files}`, (texture: any) => {
+				currentEnvMap = texture;
+				texture.encoding = encoding || LinearEncoding;
+				currentProcessedEnv = pmremGenerator.fromEquirectangular(texture).texture;
+				setEnvironment();
+			});
 		}
 		currentFormat = format;
 	};
 
 	const setEnvironment = () => {
-		scene.environment = processedEnv;
-		if (isBackground) scene.background = processedEnv;
-		if (groundProjection) enableGroundEnv();
+		scene.environment = currentProcessedEnv;
+		if (isBackground) scene.background = currentProcessedEnv;
 		invalidate();
 	};
 
-	const enableGroundEnv = () => {
-		if (groundProjection) {
-			groundEnv = new GroundProjectedEnv(envMap);
-			groundEnv.scale.setScalar(100);
-			groundEnv.radius = groundProjection.radius;
-			groundEnv.height = groundProjection.height;
-			scene.add(groundEnv);
+	const toggleGroundEnv = (
+		groundEnv: GroundProjectedEnv | undefined,
+		groundEnvProps: { radius: number; height: number } | undefined,
+		envMap: Texture
+	) => {
+		if (groundEnv && !groundEnvProps) {
+			scene.remove(currentGroundEnv);
+			currentGroundEnv = undefined;
+			invalidate('Removing ground projected environment');
+		}
+		if (!groundEnv && groundEnvProps && envMap) {
+			currentGroundEnv = new GroundProjectedEnv(envMap);
+			currentGroundEnv.scale.setScalar(100);
+			currentGroundEnv.radius = groundEnvProps.radius;
+			currentGroundEnv.height = groundEnvProps.height;
+			scene.add(currentGroundEnv);
+			invalidate('Enabling ground projected environment');
+		}
+		if (groundEnv && groundEnvProps) {
+			currentGroundEnv.radius = groundEnvProps.radius;
+			currentGroundEnv.height = groundEnvProps.height;
+			invalidate('Updating ground projected environment properties');
 		}
 	};
 
-	$: {
-		if (envPath != previousEnvPath || format != currentFormat) {
-			if (processedEnv) {
-				processedEnv.dispose();
-			}
-			console.log(envPath, previousEnvPath);
-			loadEnv();
+	$: toggleGroundEnv(currentGroundEnv, groundProjection, currentEnvMap);
 
+	$: {
+		// Reload environment on path change
+		if (envPath != previousEnvPath || format != currentFormat) {
+			if (currentProcessedEnv) {
+				currentProcessedEnv.dispose();
+			}
+			loadEnvironment();
 			previousEnvPath = envPath;
 		}
 
@@ -128,30 +116,16 @@
 			scene.background = null;
 			invalidate('Removing Environment as scene.background');
 		}
-		if (isBackground && !scene.background && processedEnv) {
-			scene.background = processedEnv;
+		if (isBackground && !scene.background && currentProcessedEnv) {
+			scene.background = currentProcessedEnv;
 			invalidate('Adding Environment as scene.background');
-		}
-		if (groundEnv && groundProjection) {
-			groundEnv.radius = groundProjection.radius;
-			groundEnv.height = groundProjection.height;
-			invalidate();
-		}
-
-		if (groundEnv && !groundProjection) {
-			scene.remove(groundEnv);
-			invalidate('Disabling ground projected environment');
-		}
-		if (!groundEnv && groundProjection && envMap) {
-			enableGroundEnv();
-			invalidate('Enabling ground projected environment');
 		}
 	}
 
 	onDestroy(() => {
 		scene.environment = null;
 		scene.background = null;
-		if (processedEnv) processedEnv.dispose();
+		if (currentProcessedEnv) currentProcessedEnv.dispose();
 		invalidate('Environment destroyed');
 	});
 </script>
