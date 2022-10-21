@@ -14,5 +14,9 @@ export const routes = [
 	{
 		name: 'Helper grid',
 		href: '/04_helper-grid'
+	},
+	{
+		name: 'Physical text',
+		href: '/05_physics-text'
 	}
 ];
