@@ -61,6 +61,9 @@
 
 		window.addEventListener('keydown', (e) => {
 			let key = e.key == ' ' ? '_' : e.key;
+
+			const allowedLetters = key.match(/^[A-Za-z]+$/);
+
 			if (!letterGeometries[key]) {
 				const textGeo = new TextGeometry(key, {
 					font: response,
@@ -78,7 +81,7 @@
 				letterGeometries[key] = textGeo;
 			}
 
-			letterQueue.push(key);
+			if (allowedLetters && allowedLetters[0].length == 1) letterQueue.push(key);
 
 			g();
 		});
@@ -86,8 +89,14 @@
 </script>
 
 <World>
-	<PerspectiveCamera position={{ x: 5, y: 7, z: 17 }} fov={60} near={1} far={20000}>
-		<OrbitControls autoRotate={false} enableZoom={true} target={{ x: 0, y: 0, z: 0 }} />
+	<PerspectiveCamera
+		position={{ x: 5, y: 7, z: 9 }}
+		fov={60}
+		near={1}
+		far={20000}
+		lookAt={{ x: 0, y: 0, z: 0 }}
+	>
+		<!-- <OrbitControls autoRotate={false} enableZoom={true} target={{ x: 0, y: 0, z: 0 }} /> -->
 	</PerspectiveCamera>
 
 	<!-- <Debug /> -->
