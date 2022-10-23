@@ -18,5 +18,9 @@ export const routes = [
 	{
 		name: 'Physical text',
 		href: '/05_physics-text'
+	},
+	{
+		name: 'Sexy refractions',
+		href: '/06_sexy-refractions'
 	}
 ];
