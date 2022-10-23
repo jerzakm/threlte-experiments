@@ -21,7 +21,7 @@
 			})}
 			castShadow
 			receiveShadow
-			position={{ x: Math.random() * 3 * i, y: 3, z: Math.random() * 3 * i }}
+			position={{ x: (Math.random() - 0.5) * 3 * i, y: 1, z: (Math.random() - 0.5) * 3 * i }}
 		/>
 	{/each}
 </Group>
