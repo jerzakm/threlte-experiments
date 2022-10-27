@@ -35,7 +35,7 @@
 		0x68386c, 0xb55088, 0xf6757a, 0xe8b796, 0xc28569
 	];
 
-	const sunrise = [0x090d21, 0xa71442, 0xff5d18, 0xffddc9, 0xebac2d];
+	const sunrise = [0x090d21, 0xa71442, 0xff5d18, 0xffddc9];
 
 	const mindustryCanvas = [
 		0x362944, 0xc45d9f, 0xe39aac, 0xf0dab1, 0x6461c2, 0x2ba9b4, 0x93d4b5, 0xf0f6e8
@@ -53,6 +53,8 @@
 		0x468fd2
 	];
 
+	const palette = endesga32;
+
 	const bloomPass = new UnrealBloomPass(
 		new Vector2(window.innerWidth, window.innerHeight),
 		1.5,
@@ -60,10 +62,8 @@
 		0.85
 	);
 	bloomPass.threshold = 0.0;
-	bloomPass.strength = 0.6;
+	bloomPass.strength = 0.1;
 	bloomPass.radius = 0.3;
-
-	const palette = sunrise;
 
 	function debounce<T extends Function>(cb: T, wait = 20) {
 		let h: any = 0;
@@ -136,7 +136,7 @@
 
 <!-- <Environment path="/03_env/" files="spaichingen_hill_1k.hdr" /> -->
 
-<Pass pass={bloomPass} />
+<!-- <Pass pass={bloomPass} /> -->
 
 <World>
 	<PerspectiveCamera
@@ -174,8 +174,8 @@
 		</RigidBody>
 	{/each}
 
-	<AmbientLight color={0xffffff} intensity={0.6} />
+	<AmbientLight color={0xffffff} intensity={0.5} />
 
-	<DirectionalLight position={{ x: 15, y: 10, z: 5 }} shadow intensity={0.3} />
+	<DirectionalLight position={{ x: 15, y: 10, z: 5 }} shadow intensity={0.8} />
 	<!-- <DirectionalLight position={{ x: -7, y: 10, z: 5 }} shadow intensity={0.2} /> -->
 </World>

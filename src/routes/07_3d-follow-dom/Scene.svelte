@@ -31,7 +31,9 @@
 	});
 </script>
 
-<PerspectiveCamera position={{ x: 0, y: 0, z: 5 }} fov={75} near={1} far={20000} />
+<PerspectiveCamera position={{ x: 5, y: 0, z: 15 }} fov={60} near={1} far={20000}>
+	<OrbitControls autoRotate={false} enableZoom={true} target={{ x: 50, y: 20, z: 0 }} />
+</PerspectiveCamera>
 
 <Environment path="/03_env/" files="spaichingen_hill_1k.hdr" />
 
