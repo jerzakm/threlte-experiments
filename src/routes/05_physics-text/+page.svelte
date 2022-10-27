@@ -11,6 +11,7 @@
 </script>
 
 <wrapper class="relative h-full">
+	<h1 class="absolute text-3xl font-bold p-16">Type stuff to make it fall</h1>
 	<Canvas>
 		<Scene />
 	</Canvas>

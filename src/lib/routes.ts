@@ -20,7 +20,7 @@ export const routes = [
 		href: '/05_physics-text'
 	},
 	{
-		name: 'Sexy refractions',
-		href: '/06_sexy-refractions'
+		name: 'Refractions',
+		href: '/06_refractions'
 	}
 ];
