@@ -46,6 +46,7 @@
 	"type": "module",
 	"dependencies": {
 		"daisyui": "^2.46.0",
-		"svelte-knobby": "^0.3.4"
+		"svelte-knobby": "^0.3.4",
+		"three-custom-shader-material": "^5.0.0"
 	}
 }
