@@ -9,12 +9,11 @@
 
 	console.log(MeshLambertMaterial);
 
-	const loader = new FBXLoader();
-
 	let blacksmith: Group | undefined;
 
 	const { renderer, scene } = useThrelte();
 
+	const loader = new FBXLoader();
 	loader.load(
 		'assets/buildings/Blacksmith.fbx',
 		function (fbx) {

@@ -7,8 +7,8 @@
 
 <wrapper class="relative h-full">
 	<Canvas frameloop={'always'}>
-		<Scene />
+		<!-- <Scene /> -->
 		<!-- <NewScene /> -->
-		<!-- <SceneMasking /> -->
+		<SceneMasking />
 	</Canvas>
 </wrapper>

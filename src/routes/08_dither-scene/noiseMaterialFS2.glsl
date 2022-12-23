@@ -3,7 +3,12 @@ uniform float iTime;
 uniform float opacity;
 uniform vec3 iResolution;
 uniform sampler2D tDiffuse;
+uniform sampler2D uNoiseTex;
 varying vec3 vPosition;
+
+#define blend 0 // Correct blend on collisions. Costlier; usefull only for white noise
+
+#define hue(v)  ( .6 + .6 * cos( 6.28*(v)  + vec4(0,23,21,0) ) )  // https://www.shadertoy.com/view/ll2cDc
 
 // NOISE 1
 
@@ -48,39 +53,19 @@ lowp float snoise(in mediump vec3 v) {
   return .5 + 12. * dot(m * m * m, vec4(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3)));
 }
 
-// noise 2 - halftone
-// float greyScale(in vec3 col) {
-//   return dot(col, vec3(0.2126, 0.7152, 0.0722));
-// }
-
-// mat2 rotate2d(float angle) {
-//   return mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
-// }
-
-// float dotScreen(in vec2 uv, in float angle, in float scale) {
-//   float s = sin(angle), c = cos(angle);
-//   vec2 p = (uv - vec2(0.5)) * iResolution.xy;
-//   vec2 q = rotate2d(angle) * p * scale;
-//   return (sin(q.x) * sin(q.y)) * 4.0;
-// }
-
 #define stepnoise0(p, size) rnd( floor(p/size)*size ) 
 #define rnd(U) fract(sin( 1e3*(U)*mat2(1,-7.131, 12.9898, 1.233) )* 43758.5453)
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
   vec4 originalColor = texture2D(tDiffuse, vUv);
+  vec4 noiseColor = texture2D(uNoiseTex, vUv);
   vec3 pos3d = vPosition * 5.;
   float noise3d = snoise(pos3d);
 
-  fragColor = vec4(vec3(noise3d), 1.);
+  // fragColor = vec4(vec3(noise3d), 1.);
+  fragColor = noiseColor;
 
-// halftone bad
-//   float grey = noise3d;
-//   float angle = 0.1;
-//   float scale = 0.1;
-//   vec3 halftoneNoise = vec3(grey * 20.0 - 5.0 + dotScreen(vPosition.xy, vPosition.z, scale));
-//   fragColor = vec4(halftoneNoise, 1.0);
 }
 
 void main() {

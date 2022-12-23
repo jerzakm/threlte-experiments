@@ -69,17 +69,22 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   // float c = mask(uv);
 
   float c = texture2D(tDither, vUv).r;
-  c = float(f * 1. >= c);
+  vec3 dither = texture2D(tDither, vUv).rgb;
+  vec3 color = texture2D(tDiffuse, vUv).rgb;
 
-  vec3 finalColor = vec3(c);
+  float rBlack = step(dither.r + dither.b + dither.g - color.r - color.b - color.g, 0.1);
+
+  // c = float(f * 1. >= c);
+
+  vec3 finalColor = vec3(rBlack);
+  // vec3 finalColor = vec3(color * dither);
   // finalColor = finalColor * clr.xyz * 1.;
-  fragColor = vec4(finalColor, 1.0);
+  // fragColor = texture2D(tDither, vUv);
 
   // fragColor = texture2D(tDiffuse, vUv).rgba;
   // fragColor = texture2D(tDither, vUv).rgba;
   // vec3 ditherTexture = texture2D(tDither, vUv).rgb;
-  // fragColor = vec4(color.r, ditherTexture.gb, 1.);
-
+  fragColor = vec4(finalColor, 1.);
 }
 
 void main() {

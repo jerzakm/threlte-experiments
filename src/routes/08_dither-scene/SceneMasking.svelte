@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { useFrame, useThrelte, T, OrbitControls } from '@threlte/core';
+	import { useFrame, useThrelte, T, OrbitControls, useTexture } from '@threlte/core';
 	import { get } from 'svelte/store';
-	import type { PerspectiveCamera } from 'three';
+	import { MeshLambertMaterial, Vector3, type PerspectiveCamera } from 'three';
 	import * as THREE from 'three';
 
 	import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 	import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-	import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass';
 	import { default as noiseFragment2 } from './noiseMaterialFS2.glsl?raw';
 	import { default as noiseVertex } from './noiseMaterialVS.glsl?raw';
-	import { default as ditherFrag } from './ditherPass.glsl?raw';
 	import { default as fragmentDitherTexture } from './ditherTexture.glsl?raw';
+	import CustomShaderMaterial from 'three-custom-shader-material/vanilla';
+	import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 	const fragmentShaderScreen = `  
   varying vec2 vUv;
   uniform sampler2D tDiffuse;
@@ -18,21 +18,6 @@
   void main() {
 
     gl_FragColor = texture2D( tDiffuse, vUv );
-
-  }`;
-
-	const fragmentShaderPass1 = `
-  varying vec2 vUv;
-  uniform float time;
-
-  void main() {
-
-    float r = vUv.x;
-    if( vUv.y < 0.5 ) r = 0.0;
-    float g = vUv.y;
-    if( vUv.x < 0.5 ) g = 0.0;
-
-    gl_FragColor = vec4( r, g, time, 1.0 );
 
   }`;
 
@@ -45,6 +30,8 @@
 
   }
 `;
+
+	const bluenoise = useTexture('bluenoise2.png');
 
 	const ctx = useThrelte();
 	const { renderer, camera } = ctx;
@@ -69,11 +56,11 @@
 	const sceneScreen = new THREE.Scene();
 
 	let light = new THREE.DirectionalLight(0xffffff);
-	light.position.set(0, 0, 5);
+	light.position.set(10, 10, 50);
 	sceneRTT.add(light);
 
 	light = new THREE.DirectionalLight(0xffaaaa, 4.5);
-	light.position.set(0, 0, -1).normalize();
+	light.position.set(-2, 10, -10);
 	sceneRTT.add(light);
 
 	const rtTexture = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
@@ -111,7 +98,8 @@
 			iResolution: { value: new THREE.Vector3() },
 			tDiffuse: { value: null },
 			iTime: { value: 0 },
-			opacity: { value: 1 }
+			opacity: { value: 1 },
+			uNoiseTex: { value: bluenoise }
 		},
 		fragmentShader: noiseFragment2,
 		vertexShader: noiseVertex,
@@ -134,17 +122,14 @@
 
 	let threlteCamera: PerspectiveCamera;
 
-	//@ts-ignore
-	const composer = new EffectComposer(renderer);
-	const renderPass = new RenderPass(scene, pCamera);
+	import { default as dpasfrag } from './ditherPass.glsl?raw';
 
 	const DitherShader = {
 		uniforms: {
 			tDiffuse: { value: null },
 			opacity: { value: 1.0 },
-			iResolution: { value: new THREE.Vector3() },
-			iTime: { value: 0 },
-			tNoise: { value: rtTexture.texture }
+			iResolution: { value: new Vector3() },
+			iTime: { value: 0 }
 		},
 
 		vertexShader: /* glsl */ `
@@ -154,15 +139,24 @@
     gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
   }`,
 
-		fragmentShader: ditherFrag
+		fragmentShader: dpasfrag
 	};
-
+	import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass';
 	const ditherPass = new ShaderPass(DitherShader);
 
+	//@ts-ignore
+	const composer = new EffectComposer(renderer);
+	const renderPass = new RenderPass(sceneNoiseRTT, cameraRTT);
 	composer.addPass(renderPass);
-	composer.addPass(ditherPass);
+	// composer.addPass(ditherPass);
 
 	useFrame(({ clock }) => {
+		ditherPass.uniforms.iResolution.value.set(
+			renderer?.domElement.width,
+			renderer?.domElement.height,
+			1
+		);
+		ditherPass.uniforms.iTime.value = clock.getElapsedTime();
 		noiseMaterial.uniforms.iTime.value = clock.getElapsedTime();
 		noiseMaterial.uniforms.iResolution.value.set(
 			renderer?.domElement.width,
@@ -177,18 +171,11 @@
 		pCamera.position.y += (0 - pCamera.position.y) * 0.05;
 		pCamera.lookAt(scene.position);
 
-		ditherPass.uniforms.iResolution.value.set(
-			renderer?.domElement.width,
-			renderer?.domElement.height,
-			1
-		);
 		noiseMaterial.uniforms.iResolution.value.set(
 			renderer?.domElement.width,
 			renderer?.domElement.height,
 			1
 		);
-
-		ditherPass.uniforms.iTime.value = clock.getElapsedTime();
 		// Render noiseSphere into texture
 
 		renderer.setRenderTarget(rtNoiseMask);
@@ -212,7 +199,7 @@
 		// (using first scene as regular texture)
 
 		// renderer.render(scene, pCamera);
-		renderer.render(sceneNoiseRTT, cameraRTT);
+		// renderer.render(sceneNoiseRTT, cameraRTT);
 
 		// renderPass.camera = cameraRTT;
 		// renderPass.scene = sceneScreen;
@@ -220,10 +207,10 @@
 		//@ts-ignore
 		// noiseSphere.position.set(...threlteCamera.position);
 		// noiseSphere.rotation.set(...threlteCamera.rotation);
-		// composer.render(scene, cameraRTT);
+		// composer.render(sceneNoiseRTT, cameraRTT);
 	});
 </script>
 
 <T.PerspectiveCamera position={[-25, 10, 50]} fov={12} let:ref bind:ref={threlteCamera} makeDefault>
-	<OrbitControls enableZoom={true} target={{ y: 0.5 }} autoRotateSpeed={0.5} autoRotate />
+	<OrbitControls enableZoom={true} target={{ y: 0.5 }} autoRotateSpeed={0.0} autoRotate />
 </T.PerspectiveCamera>
