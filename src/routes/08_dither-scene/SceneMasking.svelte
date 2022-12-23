@@ -63,9 +63,15 @@
 	light.position.set(-2, 10, -10);
 	sceneRTT.add(light);
 
-	const rtTexture = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
+	const rtTexture = new THREE.WebGLRenderTarget(
+		renderer?.domElement.width,
+		renderer?.domElement.height
+	);
 
-	const rtNoiseMask = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
+	const rtNoiseMask = new THREE.WebGLRenderTarget(
+		renderer?.domElement.width,
+		renderer?.domElement.height
+	);
 
 	const materialScreen = new THREE.ShaderMaterial({
 		uniforms: { tDiffuse: { value: rtTexture.texture } },
@@ -91,6 +97,45 @@
 
 	const box = new THREE.BoxGeometry(5, 5, 5);
 
+	let blacksmith;
+
+	const loader = new FBXLoader();
+	loader.load(
+		'assets/buildings/Blacksmith.fbx',
+		function (fbx) {
+			blacksmith = fbx;
+
+			blacksmith.scale.set(0.03, 0.03, 0.03);
+
+			for (let i = 0; i < blacksmith.children[0].material.length; i++) {
+				const newNoise = new THREE.ShaderMaterial({
+					uniforms: {
+						iResolution: { value: new THREE.Vector3() },
+						tDiffuse: { value: null },
+						iTime: { value: 0 },
+						opacity: { value: 1 },
+						uNoiseTex: { value: bluenoise }
+					},
+					fragmentShader: noiseFragment2,
+					vertexShader: noiseVertex,
+					side: THREE.DoubleSide
+				});
+				newNoise.uniforms.iResolution.value.set(
+					renderer?.domElement.width,
+					renderer?.domElement.height,
+					1
+				);
+				blacksmith.children[0].material[i] = newNoise;
+			}
+
+			sceneNoise.add(blacksmith);
+		},
+		undefined,
+		function (error) {
+			console.error(error);
+		}
+	);
+
 	const mat1 = new THREE.MeshPhongMaterial({ color: 0x555555, specular: 0xffaa00, shininess: 5 });
 
 	const noiseMaterial = new THREE.ShaderMaterial({
@@ -108,11 +153,11 @@
 
 	const noiseBox = new THREE.Mesh(box, noiseMaterial);
 	noiseBox.position.set(0, 0, 0);
-	sceneNoise.add(noiseBox);
+	// sceneNoise.add(noiseBox);
 
 	const zmesh1 = new THREE.Mesh(box, mat1);
 	zmesh1.position.set(0, 0, 0);
-	sceneRTT.add(zmesh1);
+	// sceneRTT.add(zmesh1);
 
 	const quad2 = new THREE.Mesh(plane, materialScreen);
 	quad2.position.z = -100;
@@ -188,18 +233,17 @@
 		renderer.render(sceneRTT, threlteCamera);
 
 		// Render full screen quad with generated texture
-
 		renderer.setRenderTarget(null);
 		renderer.clear();
 		renderer.render(sceneScreen, cameraRTT);
 
-		renderer.render(sceneNoise, threlteCamera);
+		// renderer.render(sceneNoise, threlteCamera);
 
 		// Render second scene to screen
 		// (using first scene as regular texture)
 
 		// renderer.render(scene, pCamera);
-		// renderer.render(sceneNoiseRTT, cameraRTT);
+		renderer.render(sceneNoiseRTT, cameraRTT);
 
 		// renderPass.camera = cameraRTT;
 		// renderPass.scene = sceneScreen;

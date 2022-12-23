@@ -84,7 +84,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   // fragColor = texture2D(tDiffuse, vUv).rgba;
   // fragColor = texture2D(tDither, vUv).rgba;
   // vec3 ditherTexture = texture2D(tDither, vUv).rgb;
-  fragColor = vec4(finalColor, 1.);
+  fragColor = vec4(dither, 1.);
 }
 
 void main() {

@@ -56,15 +56,70 @@ lowp float snoise(in mediump vec3 v) {
 #define stepnoise0(p, size) rnd( floor(p/size)*size ) 
 #define rnd(U) fract(sin( 1e3*(U)*mat2(1,-7.131, 12.9898, 1.233) )* 43758.5453)
 
+float gridPattern(float size, vec3 translate) {
+  vec3 r = (vPosition.xyz + translate) / size;
+
+  vec3 grid = abs(fract(r - 0.5) - 0.5) / fwidth(r);
+
+  float xy = max(grid.x, grid.y);
+  float yz = max(grid.y, grid.z);
+  float combined = min(xy, yz);
+
+  return combined;
+}
+
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
   vec4 originalColor = texture2D(tDiffuse, vUv);
   vec4 noiseColor = texture2D(uNoiseTex, vUv);
-  vec3 pos3d = vPosition * 5.;
+  vec3 pos3d = vPosition * 1.;
   float noise3d = snoise(pos3d);
 
+  vec3 noise3 = vec3(noise3d);
+
   // fragColor = vec4(vec3(noise3d), 1.);
-  fragColor = noiseColor;
+  fragColor = vec4(noise3, 1.);
+
+  fragColor = vec4(vPosition.xyz, 1.);
+
+  float gridSize = 0.12;
+
+  vec3 cam = cameraPosition;
+
+  vec3 grid = vec3(0.);
+
+  // disappear range
+  float d = distance(cam, vPosition);
+  grid += (1. - min(gridPattern(gridSize, vec3(0.0)), 1.)) * vec3(step(0.5, 150. - d));
+
+  grid += (1. - min(gridPattern(gridSize, vec3(0.06, 0.06, 0.06) * noise3d), 1.)) * vec3(min(1., step(0.5, 100. - d)), .0, .0) * 0.8;
+  grid += (1. - min(gridPattern(gridSize, vec3(-0.06, -0.06, -0.06) * noise3d), 1.)) * vec3(min(1., step(0.5, 80. - d)), .0, .0) * 0.5;
+  grid += (1. - min(gridPattern(gridSize, vec3(0.06, 0.0, 0.06) * noise3d), 1.)) * vec3(min(1., step(0.5, 70. - d)), .0, .0) * 0.4;
+  grid += (1. - min(gridPattern(gridSize, vec3(-0.06, 0.0, -0.06) * noise3d), 1.)) * vec3(min(1., step(0.5, 60. - d)), .0, .0) * 0.3;
+
+  // grid += (1. - min(gridPattern(gridSize, vec3(-0.05, -0.05, -0.05) * noise3d), 1.)) * vec3(step(0.5, 65. - d));
+  // grid += (1. - min(gridPattern(gridSize, vec3(-0.05, -0.05, 0.0) * noise3d), 1.)) * vec3(step(0.5, 50. - d));
+  // grid += (1. - min(gridPattern(gridSize, vec3(0.0, -0.05, 0.0) * noise3d), 1.)) * vec3(step(0.5, 40. - d));
+  // grid += (1. - min(gridPattern(gridSize, vec3(0.0, -0.05, -0.05) * noise3d), 1.)) * vec3(step(0.5, 30. - d));
+
+  // grid += (1. - min(gridPattern(gridSize, vec3(0.05, 0.05, 0.05) * noise3d), 1.)) * vec3(step(0.5, 25. - d));
+  // grid += (1. - min(gridPattern(gridSize, vec3(0.05, 0.05, 0.0) * noise3d), 1.)) * vec3(step(0.5, 20. - d));
+  // grid += (1. - min(gridPattern(gridSize, vec3(0.0, 0.05, 0.0) * noise3d), 1.)) * vec3(step(0.5, 15. - d));
+  // grid += (1. - min(gridPattern(gridSize, vec3(0.0, 0.05, 0.05) * noise3d), 1.)) * vec3(step(0.5, 10. - d));
+
+  // grid += (1. - min(gridPattern(gridSize, vec3(0.07, 0.07, 0.07)), 1.)) * vec3(step(0.5, 25. - d));
+  // grid += (1. - min(gridPattern(gridSize, vec3(0.07, 0.07, 0.0)), 1.)) * vec3(step(0.5, 24. - d));
+  // grid += (1. - min(gridPattern(gridSize, vec3(0.0, 0.07, 0.0)), 1.)) * vec3(step(0.5, 22. - d));
+  // grid += (1. - min(gridPattern(gridSize, vec3(0.0, -0.07, 0.0)), 1.)) * vec3(step(0.5, 20. - d));
+  // grid += (1. - min(gridPattern(gridSize, vec3(0.0, -0.07, -0.07)), 1.)) * vec3(step(0.5, 19. - d));
+
+  // grid += (1. - min(gridPattern(gridSize, vec3(0.02, 0.02, 0.02)), 1.)) * vec3(step(0.5, 18. - d));
+  // grid += (1. - min(gridPattern(gridSize, vec3(0.02, 0.02, 0.0)), 1.)) * vec3(step(0.5, 17. - d));
+  // grid += (1. - min(gridPattern(gridSize, vec3(0.0, 0.02, 0.0)), 1.)) * vec3(step(0.5, 16. - d));
+  // grid += (1. - min(gridPattern(gridSize, vec3(0.0, -0.02, 0.0)), 1.)) * vec3(step(0.5, 15. - d));
+  // grid += (1. - min(gridPattern(gridSize, vec3(0.0, -0.02, -0.02)), 1.)) * vec3(step(0.5, 14. - d));
+
+  fragColor = vec4(vec3(grid), 1.);
 
 }
 
