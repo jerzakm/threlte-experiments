@@ -7,6 +7,26 @@ uniform vec3 iResolution;
 #define SEED2 (1.379)
 #define DMUL 8.12235325
 
+float intensity(in vec4 color) {
+  return sqrt((color.x * color.x) + (color.y * color.y) + (color.z * color.z));
+}
+
+vec3 sobel(float stepx, float stepy, vec2 center) {
+	// get samples around pixel
+  float tleft = intensity(texture2D(tDiffuse, center + vec2(-stepx, stepy)));
+  float left = intensity(texture2D(tDiffuse, center + vec2(-stepx, 0)));
+  float bleft = intensity(texture2D(tDiffuse, center + vec2(-stepx, -stepy)));
+  float top = intensity(texture2D(tDiffuse, center + vec2(0, stepy)));
+  float bottom = intensity(texture2D(tDiffuse, center + vec2(0, -stepy)));
+  float tright = intensity(texture2D(tDiffuse, center + vec2(stepx, stepy)));
+  float right = intensity(texture2D(tDiffuse, center + vec2(stepx, 0)));
+  float bright = intensity(texture2D(tDiffuse, center + vec2(stepx, -stepy)));
+  float x = tleft + 2.0 * left + bleft - tright - 2.0 * right - bright;
+  float y = -tleft - 2.0 * top - tright + bleft + 2.0 * bottom + bright;
+  float color = sqrt((x * x) + (y * y));
+  return vec3(color, color, color);
+}
+
 vec2 stepnoise(vec2 p, float size) {
   p += 10.0;
   float x = floor(p.x / size) * size;
@@ -50,7 +70,6 @@ mat3 mynormalize(mat3 mat) {
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-  vec2 uv = fragCoord.xy;
   vec4 clr = texture2D(tDiffuse, fragCoord.xy / iResolution.xy);
   float f = clr[0] * 0.3 + clr[1] * 0.6 + clr[1] * 0.1;
   vec2 uv3 = vUv;
@@ -66,25 +85,30 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   f *= 0.0;
   f = f1 - f;
 
-  // float c = mask(uv);
+  float c = texture2D(tDiffuse, vUv).r;
+  c = mask(fragCoord.xy);
+  c = float(f * 1. >= c);
 
-  float c = texture2D(tDither, vUv).r;
   vec3 dither = texture2D(tDither, vUv).rgb;
   vec3 color = texture2D(tDiffuse, vUv).rgb;
+  vec3 greyscale = vec3(color.r + color.b + color.g) * 0.3;
 
-  float rBlack = step(dither.r + dither.b + dither.g - color.r - color.b - color.g, 0.1);
+  float col = 0.;
 
-  // c = float(f * 1. >= c);
+  col = float(greyscale.r * 1.3 + 0.2 > dither.r);
 
-  vec3 finalColor = vec3(rBlack);
-  // vec3 finalColor = vec3(color * dither);
-  // finalColor = finalColor * clr.xyz * 1.;
-  // fragColor = texture2D(tDither, vUv);
+  // col += step(dither.r * greyscale.r, 0.1);
 
-  // fragColor = texture2D(tDiffuse, vUv).rgba;
-  // fragColor = texture2D(tDither, vUv).rgba;
-  // vec3 ditherTexture = texture2D(tDither, vUv).rgb;
-  fragColor = vec4(dither, 1.);
+  // vec3 finalColor = vec3(col) * step(0.1, greyscale);
+  vec3 finalColor = vec3(col * step(0.1, greyscale));
+
+  // EDGE DETECT  
+  float edRad = 0.001;
+  float sobelColor = 1. - step(0.1, sobel(edRad, edRad * 0.5, vUv).r);
+
+  fragColor = vec4(finalColor * sobelColor, 1.);
+  // fragColor = vec4(finalColor * sobelColor, 1.);
+  // fragColor = vec4(vec3(c), 1.);
 }
 
 void main() {

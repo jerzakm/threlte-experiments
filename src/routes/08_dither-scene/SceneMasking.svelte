@@ -36,7 +36,7 @@
 	const ctx = useThrelte();
 	const { renderer, camera } = ctx;
 
-	const pCamera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 1, 10000);
+	const pCamera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0, 10000);
 	pCamera.position.z = 100;
 
 	const cameraRTT = new THREE.OrthographicCamera(
@@ -95,8 +95,6 @@
 	noiseQuad.position.z = -100;
 	sceneNoiseRTT.add(noiseQuad);
 
-	const box = new THREE.BoxGeometry(5, 5, 5);
-
 	let blacksmith;
 
 	const loader = new FBXLoader();
@@ -104,9 +102,11 @@
 		'assets/buildings/Blacksmith.fbx',
 		function (fbx) {
 			blacksmith = fbx;
-
 			blacksmith.scale.set(0.03, 0.03, 0.03);
 
+			const clone = blacksmith.clone(true);
+
+			const materialArray = [];
 			for (let i = 0; i < blacksmith.children[0].material.length; i++) {
 				const newNoise = new THREE.ShaderMaterial({
 					uniforms: {
@@ -125,10 +125,15 @@
 					renderer?.domElement.height,
 					1
 				);
-				blacksmith.children[0].material[i] = newNoise;
+				materialArray.push(newNoise);
 			}
 
+			blacksmith.children[0].material = materialArray;
 			sceneNoise.add(blacksmith);
+
+			sceneRTT.add(clone);
+
+			console.log(blacksmith.children[0].material, clone.children[0].material);
 		},
 		undefined,
 		function (error) {
@@ -150,14 +155,19 @@
 		vertexShader: noiseVertex,
 		side: THREE.DoubleSide
 	});
-
+	noiseMaterial.uniforms.iResolution.value.set(
+		renderer?.domElement.width,
+		renderer?.domElement.height,
+		1
+	);
+	const box = new THREE.BoxGeometry(15, 1, 15);
 	const noiseBox = new THREE.Mesh(box, noiseMaterial);
-	noiseBox.position.set(0, 0, 0);
-	// sceneNoise.add(noiseBox);
+	noiseBox.position.set(0, -0.5, 0);
+	sceneNoise.add(noiseBox);
 
 	const zmesh1 = new THREE.Mesh(box, mat1);
-	zmesh1.position.set(0, 0, 0);
-	// sceneRTT.add(zmesh1);
+	zmesh1.position.set(0, -0.5, 0);
+	sceneRTT.add(zmesh1);
 
 	const quad2 = new THREE.Mesh(plane, materialScreen);
 	quad2.position.z = -100;
@@ -243,7 +253,7 @@
 		// (using first scene as regular texture)
 
 		// renderer.render(scene, pCamera);
-		renderer.render(sceneNoiseRTT, cameraRTT);
+		// renderer.render(sceneNoise, threlteCamera);
 
 		// renderPass.camera = cameraRTT;
 		// renderPass.scene = sceneScreen;
@@ -251,10 +261,16 @@
 		//@ts-ignore
 		// noiseSphere.position.set(...threlteCamera.position);
 		// noiseSphere.rotation.set(...threlteCamera.rotation);
-		// composer.render(sceneNoiseRTT, cameraRTT);
+		composer.render(sceneNoiseRTT, cameraRTT);
 	});
 </script>
 
-<T.PerspectiveCamera position={[-25, 10, 50]} fov={12} let:ref bind:ref={threlteCamera} makeDefault>
-	<OrbitControls enableZoom={true} target={{ y: 0.5 }} autoRotateSpeed={0.0} autoRotate />
+<T.PerspectiveCamera
+	position={[20, 25, 45]}
+	fov={12}
+	bind:ref={threlteCamera}
+	makeDefault
+	args={[30, undefined, 0.1]}
+>
+	<OrbitControls enableZoom={true} target={{ y: 0.5 }} autoRotateSpeed={0.2} autoRotate />
 </T.PerspectiveCamera>

@@ -68,6 +68,10 @@ float gridPattern(float size, vec3 translate) {
   return combined;
 }
 
+float intensity(in vec4 color) {
+  return sqrt((color.x * color.x) + (color.y * color.y) + (color.z * color.z));
+}
+
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
   vec4 originalColor = texture2D(tDiffuse, vUv);
@@ -82,7 +86,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
   fragColor = vec4(vPosition.xyz, 1.);
 
-  float gridSize = 0.12;
+  float gridSize = 0.09;
 
   vec3 cam = cameraPosition;
 
@@ -92,34 +96,35 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   float d = distance(cam, vPosition);
   grid += (1. - min(gridPattern(gridSize, vec3(0.0)), 1.)) * vec3(step(0.5, 150. - d));
 
-  grid += (1. - min(gridPattern(gridSize, vec3(0.06, 0.06, 0.06) * noise3d), 1.)) * vec3(min(1., step(0.5, 100. - d)), .0, .0) * 0.8;
-  grid += (1. - min(gridPattern(gridSize, vec3(-0.06, -0.06, -0.06) * noise3d), 1.)) * vec3(min(1., step(0.5, 80. - d)), .0, .0) * 0.5;
-  grid += (1. - min(gridPattern(gridSize, vec3(0.06, 0.0, 0.06) * noise3d), 1.)) * vec3(min(1., step(0.5, 70. - d)), .0, .0) * 0.4;
-  grid += (1. - min(gridPattern(gridSize, vec3(-0.06, 0.0, -0.06) * noise3d), 1.)) * vec3(min(1., step(0.5, 60. - d)), .0, .0) * 0.3;
+  for(float i = 1.0; i < 5.; i++) {
 
-  // grid += (1. - min(gridPattern(gridSize, vec3(-0.05, -0.05, -0.05) * noise3d), 1.)) * vec3(step(0.5, 65. - d));
-  // grid += (1. - min(gridPattern(gridSize, vec3(-0.05, -0.05, 0.0) * noise3d), 1.)) * vec3(step(0.5, 50. - d));
-  // grid += (1. - min(gridPattern(gridSize, vec3(0.0, -0.05, 0.0) * noise3d), 1.)) * vec3(step(0.5, 40. - d));
-  // grid += (1. - min(gridPattern(gridSize, vec3(0.0, -0.05, -0.05) * noise3d), 1.)) * vec3(step(0.5, 30. - d));
+    float noise3d = snoise(pos3d * 3. + vec3(i * 0.03, i * 0.03, i * 0.03));
+    // noise3d = 1.;
 
-  // grid += (1. - min(gridPattern(gridSize, vec3(0.05, 0.05, 0.05) * noise3d), 1.)) * vec3(step(0.5, 25. - d));
-  // grid += (1. - min(gridPattern(gridSize, vec3(0.05, 0.05, 0.0) * noise3d), 1.)) * vec3(step(0.5, 20. - d));
-  // grid += (1. - min(gridPattern(gridSize, vec3(0.0, 0.05, 0.0) * noise3d), 1.)) * vec3(step(0.5, 15. - d));
-  // grid += (1. - min(gridPattern(gridSize, vec3(0.0, 0.05, 0.05) * noise3d), 1.)) * vec3(step(0.5, 10. - d));
+    // grid += (1. - min(gridPattern(gridSize, vec3(i * 0.05, i * 0.05, i * 0.05)), 1.)) * vec3(min(1., step(0.5, i * 19. - 5. - d)), .0, .0) * 0.95;
+    // grid += (1. - min(gridPattern(gridSize, vec3(i * 0.05, i * 0.0, i * 0.05)), 1.)) * vec3(min(1., step(0.5, i * 18. - 5. - d)), .0, .0) * 0.90;
+    // grid += (1. - min(gridPattern(gridSize, vec3(i * 0.0, i * 0.05, i * 0.0)), 1.)) * vec3(min(1., step(0.5, i * 18. - 4. - d)), .0, .0) * 0.85;
+    // grid += (1. - min(gridPattern(gridSize, vec3(i * 0.0, i * 0.0, i * 0.5)), 1.)) * vec3(min(1., step(0.5, i * 18. - 4. - d)), .0, .0) * 0.75;
+    // grid += (1. - min(gridPattern(gridSize, vec3(i * 0.0, i * 0.05, i * -0.5)), 1.)) * vec3(min(1., step(0.5, i * 18. - 4. - d)), .0, .0) * 0.70;
+    // grid += (1. - min(gridPattern(gridSize, vec3(i * 0.0, i * -0.05, i * -0.5)), 1.)) * vec3(min(1., step(0.5, i * 18. - 4. - d)), .0, .0) * 0.65;
+    // grid += (1. - min(gridPattern(gridSize, vec3(i * 0.03, i * 0.03, i * 0.03)), 1.)) * vec3(min(1., step(0.5, i * 18. - 4. - d)), .0, .0) * 0.6;
+    grid += (1. - min(gridPattern(gridSize, vec3(i * 0.02, i * 0.06, i * 0.03)), 1.)) * vec3(min(1., step(0.5, i * 19. - 3. - d)), .0, .0) * 0.55;
+    grid += (1. - min(gridPattern(gridSize, vec3(i * 0.03, i * 0.03, 0.)), 1.)) * vec3(min(1., step(0.5, i * 18. - 3. - d)), .0, .0) * 0.5;
+    grid += (1. - min(gridPattern(gridSize, vec3(i * 0.02, i * 0.04, 0.)), 1.)) * vec3(min(1., step(0.5, i * 18. - 3. - d)), .0, .0) * 0.45;
+    grid += (1. - min(gridPattern(gridSize, vec3(i * 0.03, .0, .0)), 1.)) * vec3(min(1., step(0.5, i * 17. - 1. - d)), .0, .0) * 0.4;
+    grid += (1. - min(gridPattern(gridSize, vec3(i * 0.02, .0, .0)), 1.)) * vec3(min(1., step(0.5, i * 17. - 1. - d)), .0, .0) * 0.35;
+    grid += (1. - min(gridPattern(gridSize, vec3(-i * 0.03, .0, .0) * noise3d), 1.)) * vec3(min(1., step(0.5, i * 16. - 1. - d)), .0, .0) * 0.3;
+    grid += (1. - min(gridPattern(gridSize, vec3(-i * 0.02, .0, .0) * noise3d), 1.)) * vec3(min(1., step(0.5, i * 16. - 1. - d)), .0, .0) * 0.25;
+    grid += (1. - min(gridPattern(gridSize, vec3(-i * 0.03, -i * 0.03, 0.)), 1.)) * vec3(min(1., step(0.5, i * 15. - 1. - d)), .0, .0) * 0.2;
+    grid += (1. - min(gridPattern(gridSize, vec3(-i * 0.02, -i * 0.02, 0.)), 1.)) * vec3(min(1., step(0.5, i * 15. - 1. - d)), .0, .0) * 0.15;
+    grid += (1. - min(gridPattern(gridSize, vec3(-i * 0.03, -i * 0.02, -i * 0.03) * noise3d), 1.)) * vec3(min(1., step(0.5, i * 14. - 1. - d)), .0, .0) * 0.1;
+    grid += (1. - min(gridPattern(gridSize, vec3(-i * 0.02, -i * 0.02, -i * 0.03) * noise3d), 1.)) * vec3(min(1., step(0.5, i * 14. - 1. - d)), .0, .0) * 0.05;
 
-  // grid += (1. - min(gridPattern(gridSize, vec3(0.07, 0.07, 0.07)), 1.)) * vec3(step(0.5, 25. - d));
-  // grid += (1. - min(gridPattern(gridSize, vec3(0.07, 0.07, 0.0)), 1.)) * vec3(step(0.5, 24. - d));
-  // grid += (1. - min(gridPattern(gridSize, vec3(0.0, 0.07, 0.0)), 1.)) * vec3(step(0.5, 22. - d));
-  // grid += (1. - min(gridPattern(gridSize, vec3(0.0, -0.07, 0.0)), 1.)) * vec3(step(0.5, 20. - d));
-  // grid += (1. - min(gridPattern(gridSize, vec3(0.0, -0.07, -0.07)), 1.)) * vec3(step(0.5, 19. - d));
+  }
 
-  // grid += (1. - min(gridPattern(gridSize, vec3(0.02, 0.02, 0.02)), 1.)) * vec3(step(0.5, 18. - d));
-  // grid += (1. - min(gridPattern(gridSize, vec3(0.02, 0.02, 0.0)), 1.)) * vec3(step(0.5, 17. - d));
-  // grid += (1. - min(gridPattern(gridSize, vec3(0.0, 0.02, 0.0)), 1.)) * vec3(step(0.5, 16. - d));
-  // grid += (1. - min(gridPattern(gridSize, vec3(0.0, -0.02, 0.0)), 1.)) * vec3(step(0.5, 15. - d));
-  // grid += (1. - min(gridPattern(gridSize, vec3(0.0, -0.02, -0.02)), 1.)) * vec3(step(0.5, 14. - d));
+  fragColor = vec4(vec3(grid), 1.);  
 
-  fragColor = vec4(vec3(grid), 1.);
+  // fragColor = vec4(vec3(snoise(pos3d * 50.)), 1.);
 
 }
 
