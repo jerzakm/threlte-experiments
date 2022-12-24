@@ -5,7 +5,7 @@
 	let elementToFollow;
 </script>
 
-<wrapper class="relative h-full bg-black">
+<wrapper class="relative h-full">
 	<Canvas frameloop={'always'}>
 		<Scene />
 	</Canvas>

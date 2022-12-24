@@ -2,6 +2,7 @@ lockfileVersion: 5.4
 
 specifiers:
   '@dimforge/rapier3d-compat': ^0.10.0
+  '@mapbox/martini': ^0.2.0
   '@sveltejs/adapter-auto': ^1.0.0
   '@sveltejs/kit': ^1.0.1
   '@theatre/core': ^0.5.0
@@ -37,6 +38,7 @@ specifiers:
   vite: ^4.0.2
 
 dependencies:
+  '@mapbox/martini': 0.2.0
   daisyui: 2.46.0_r4gnkvssmvyxmi2wmat5xbx36a
   svelte-knobby: 0.3.4_svelte@3.55.0
   three-csm: 3.1.1
@@ -330,6 +332,10 @@ packages:
       '@jridgewell/resolve-uri': 3.1.0
       '@jridgewell/sourcemap-codec': 1.4.14
     dev: true
+
+  /@mapbox/martini/0.2.0:
+    resolution: {integrity: sha512-7hFhtkb0KTLEls+TRw/rWayq5EeHtTaErgm/NskVoXmtgAQu/9D299aeyj6mzAR/6XUnYRp2lU+4IcrYRFjVsQ==}
+    dev: false
 
   /@nodelib/fs.scandir/2.1.5:
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
