@@ -29,12 +29,12 @@
     
 
     // Mouse influence
-    float mousePhase = max(2.,clamp( length( ( uv - vec2( 0.5 ) ) * BOUNDS - vec2( mousePos.x, - mousePos.y ) ) * PI / mouseSize*1.1 , 1.0, PI ));
+    float mousePhase = max(2.,clamp( length( ( uv - vec2( 0.5 ) ) * BOUNDS - vec2( mousePos.x, - mousePos.y ) ) * PI*2. / mouseSize*1.1 , 1.0, PI ));
     
     float mousePhase2 = clamp( length( ( uv - vec2( 0.5 ) ) * BOUNDS - vec2( mousePos.x, - mousePos.y ) ) * PI / mouseSize*0.5, 0.0, PI );
     
 
-    float newHeight = ( heightmapValue.y ) * 0.999;
+    float newHeight = ( heightmapValue.y ) * 0.9995;
 
     float change = ( cos( mousePhase ) + 1.0 ) * intensity;
 
@@ -51,7 +51,7 @@
     }
     
 
-    newHeight = max(-50., newHeight);
+    newHeight = max(-4., newHeight);
 
     heightmapValue.y = heightmapValue.x;
     heightmapValue.x = newHeight;
@@ -237,7 +237,14 @@ void main()	{
 	import { OrbitControls, useFrame, useThrelte, T, useTexture } from '@threlte/core';
 
 	import CustomShaderMaterial from 'three-custom-shader-material/vanilla';
-	import { MeshStandardMaterial, PlaneGeometry, SphereGeometry, Vector2 } from 'three';
+	import {
+		Color,
+		MeshStandardMaterial,
+		PlaneGeometry,
+		SphereGeometry,
+		Vector2,
+		WebGLRenderTarget
+	} from 'three';
 	import { Environment } from '@threlte/extras';
 	import { decodeTerrainFromTile, genMartiniTerrain } from '$lib/martiniTerrain';
 	import type { BufferGeometry } from 'three';
@@ -248,6 +255,13 @@ void main()	{
 	import { default as vertexShader } from './snowVert.glsl?raw';
 	import { DEG2RAD } from 'three/src/math/MathUtils';
 	import { AutoColliders, Collider, Debug, RigidBody, World } from '@threlte/rapier';
+
+	import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+	import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+	import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass';
+	import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+	import { BokehPass } from 'three/examples/jsm/postprocessing/BokehPass';
+	import Postprocessing from './Postprocessing.svelte';
 
 	let playerPosition = [0, 0, 0];
 
@@ -462,7 +476,6 @@ void main()	{
 	}
 
 	ctx.renderer?.domElement.addEventListener('mousemove', onPointerMove);
-	const cam = ctx.camera;
 
 	const snowMaterial = new ShaderMaterial({
 		fragmentShader,
@@ -481,7 +494,7 @@ void main()	{
 	const terrainMaterial = new CustomShaderMaterial({
 		baseMaterial: THREE.MeshStandardMaterial,
 		vertexShader: `
-        varying vec2 vUv;
+        // varying vec2 vUv;
         varying vec3 vPosition;
         uniform sampler2D heightmap;
         void main() {
@@ -495,13 +508,15 @@ void main()	{
 		fragmentShader: `
         uniform sampler2D heightmap;
         varying vec3 vPosition;
-        varying vec2 vUv;
+        // varying vec2 vUv;
+        
         void main() {
             // float heightValue = texture2D(heightmap, vUv).x;
             float tColor = texture2D(heightmap, vec2(vUv.x, 1.-vUv.y)).x;            
             vec3 tColorMod = vec3(min(0.5,-tColor*0.1));
             tColorMod.b*= 0.9;
-            csm_DiffuseColor = vec4(diffuse-tColorMod*1.3, 1.);
+            csm_DiffuseColor = vec4(diffuse-tColorMod*1.3, 1.);            
+
             
             // UVS
             // csm_DiffuseColor = vec4(vUv, 1.,1.);
@@ -512,8 +527,11 @@ void main()	{
         }
     `,
 
-		// normalMap: snowNormal,
-		// normalScale: new THREE.Vector2(2.1, 2.1),
+		normalMap: snowNormal,
+		normalScale: new THREE.Vector2(1.1, 1.1),
+		envMapIntensity: 0.8,
+		emissiveIntensity: 2,
+		wireframe: false,
 
 		uniforms: {
 			trail: {
@@ -522,8 +540,8 @@ void main()	{
 			heightmap: { value: null }
 		},
 
-		color: 0xceceef,
-		wireframe: false
+		color: 0xceceef
+		// color: 'red'
 	});
 
 	let terrainMesh: THREE.Mesh;
@@ -548,6 +566,8 @@ void main()	{
 
 	let bt = { x: 0, y: 0, z: 0 };
 
+	console.log(renderer, scene, camera);
+
 	function render() {
 		const uniforms = heightmapVariable.material.uniforms;
 
@@ -564,40 +584,23 @@ void main()	{
 				z: 0
 			};
 
+			const impulseStrength = 100;
+
 			if (buttons.s) {
-				impulseVector.z += 1000;
+				impulseVector.z += impulseStrength;
 			}
 			if (buttons.w) {
-				impulseVector.z -= 1000;
+				impulseVector.z -= impulseStrength;
 			}
 
 			if (buttons.d) {
-				impulseVector.x += 1000;
+				impulseVector.x += impulseStrength;
 			}
 			if (buttons.a) {
-				impulseVector.x -= 1000;
+				impulseVector.x -= impulseStrength;
 			}
 			testBall.applyImpulse(impulseVector, true);
 		}
-		// Set uniforms: mouse interaction
-		// if (mouseMoved) {
-		// 	raycaster.setFromCamera(mouseCoords, $cam);
-
-		// 	// const intersects = raycaster.intersectObject(meshRay);
-		// 	const intersects = raycaster.intersectObject(terrainMesh);
-
-		// 	if (intersects.length > 0) {
-		// 		const point = intersects[0].point;
-		// 		playerPosition = [point.x, point.y - 0.5, point.z];
-		// 		uniforms['mousePos'].value.set(point.x * 2 - 256, point.z * 2 - 256);
-		// 	} else {
-		// 		uniforms['mousePos'].value.set(10000, 10000);
-		// 	}
-
-		// 	mouseMoved = false;
-		// } else {
-		// 	uniforms['mousePos'].value.set(10000, 10000);
-		// }
 
 		// Do the gpu computation
 		gpuCompute.compute();
@@ -616,17 +619,22 @@ void main()	{
 			gpuCompute.getCurrentRenderTarget(heightmapVariable).texture;
 
 		// Render
-		renderer.render(scene, camera);
 	}
+
+	const tempTarget = new WebGLRenderTarget(1, 1);
 
 	let t = 0;
 
-	useFrame(({ clock }) => {
+	useFrame(({ clock, composer }) => {
 		const renderer = ctx.renderer;
 		if (!renderer) return;
 		renderer.autoClear = false;
 		renderer.clear();
+		renderer.setRenderTarget(tempTarget);
 		render();
+		renderer.setRenderTarget(null);
+		// composer?.render(scene, camera);
+		// renderer.setRenderTarget(tempTarget);
 
 		t += clock.getDelta() * 1000;
 
@@ -651,11 +659,11 @@ void main()	{
 	img.addEventListener('load', (e) => {
 		const terrain = decodeTerrainFromTile(img);
 		terrainPhysicsGeometry = genMartiniTerrain(terrain, img.width, 50);
-		terrainGeometry = genMartiniTerrain(terrain, img.width, 0);
+		terrainGeometry = genMartiniTerrain(terrain, img.width, 1);
 	});
 </script>
 
-<T.PerspectiveCamera
+<!-- <T.PerspectiveCamera
 	position={[200 + bt.x / 2, 100, 200 + bt.z / 2]}
 	fov={30}
 	let:ref
@@ -669,12 +677,23 @@ void main()	{
 		autoRotate
 		autoRotateSpeed={0.0}
 	/>
-</T.PerspectiveCamera>
+</T.PerspectiveCamera> -->
 
-<!-- <T.Mesh position={playerPosition}>
-	<T.SphereGeometry args={[10]} />
-	<T.MeshStandardMaterial color={'red'} />
-</T.Mesh> -->
+<T.PerspectiveCamera
+	position={[200, 100, 200]}
+	fov={30}
+	let:ref
+	makeDefault
+	bind:ref={camera}
+	far={99999}
+>
+	<OrbitControls
+		enableZoom={true}
+		target={{ x: 100, y: 0.5, z: 100 }}
+		autoRotate
+		autoRotateSpeed={0.0}
+	/>
+</T.PerspectiveCamera>
 
 <Environment files="03_env/belfast_sunset_puresky_4k.hdr" isBackground />
 
@@ -691,7 +710,7 @@ void main()	{
 			geometry={terrainGeometry}
 			material={terrainMaterial}
 			bind:ref={terrainMesh}
-			position={[0, 6, 0]}
+			position={[0, 3, 0]}
 		>
 			<!-- <T.MeshStandardMaterial /> -->
 		</T.Mesh>
@@ -704,7 +723,7 @@ void main()	{
 			<RigidBody position={ball} type="dynamic" bind:rigidBody={testBall}>
 				<AutoColliders shape={'ball'} restitution={0.6}>
 					<T.Mesh castShadow receiveShadow>
-						<T.SphereGeometry args={[10, 20, 20]} />
+						<T.SphereGeometry args={[5, 15, 15]} />
 						<T.MeshStandardMaterial color={'blue'} />
 					</T.Mesh>
 				</AutoColliders>
@@ -714,7 +733,11 @@ void main()	{
 
 	<!-- <Debug depthTest={true} depthWrite={true} side={DoubleSide} /> -->
 </World>
-
-<!-- <T.DirectionalLight position={[3, 10, 10]} intensity={0.5} castShadow />
+<!-- 
+<T.DirectionalLight position={[3, 10, 10]} intensity={0.5} castShadow />
 <T.DirectionalLight position={[-3, 10, -10]} intensity={0.2} castShadow />
 <T.AmbientLight intensity={0.2} /> -->
+
+{#if scene && camera}
+	<Postprocessing {scene} {camera} />
+{/if}

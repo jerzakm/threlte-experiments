@@ -47,6 +47,7 @@
 	"dependencies": {
 		"@mapbox/martini": "^0.2.0",
 		"daisyui": "^2.46.0",
+		"postprocessing": "^6.29.1",
 		"svelte-knobby": "^0.3.4",
 		"three-csm": "^3.1.1",
 		"three-custom-shader-material": "^5.0.0",
