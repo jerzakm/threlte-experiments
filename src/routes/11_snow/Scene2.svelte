@@ -44,9 +44,6 @@
 
     newHeight += change;
 
-
-
-
     if(mousePhase2> 0.5 && mousePhase2< 1.5){
 
       // newHeight += mousePhase2;
@@ -236,11 +233,19 @@ void main()	{
 	import * as THREE from 'three';
 	import { GPUComputationRenderer } from 'three/examples/jsm/misc/GPUComputationRenderer.js';
 	import { SimplexNoise } from 'three/examples/jsm/math/SimplexNoise.js';
-	import { OrbitControls, useFrame, useThrelte, T } from '@threlte/core';
+	import { OrbitControls, useFrame, useThrelte, T, useTexture } from '@threlte/core';
 
 	import CustomShaderMaterial from 'three-custom-shader-material/vanilla';
-	import { MeshStandardMaterial, SphereGeometry } from 'three';
+	import { MeshStandardMaterial, PlaneGeometry, SphereGeometry, Vector2 } from 'three';
 	import { Environment } from '@threlte/extras';
+	import { decodeTerrainFromTile, genMartiniTerrain } from '$lib/martiniTerrain';
+	import type { BufferGeometry } from 'three';
+	import { ShaderMaterial } from 'three';
+	import { DoubleSide } from 'three';
+
+	import { default as fragmentShader } from './snowFrag.glsl?raw';
+	import { default as vertexShader } from './snowVert.glsl?raw';
+	import { DEG2RAD } from 'three/src/math/MathUtils';
 
 	let playerPosition = [0, 0, 0];
 
@@ -288,19 +293,11 @@ void main()	{
 		sun.position.set(300, 400, 175);
 		scene.add(sun);
 
-		const sun2 = new THREE.DirectionalLight(0x40a040, 0.6);
-		sun2.position.set(-100, 350, -200);
+		const sun2 = new THREE.DirectionalLight(0x40a040, 0.2);
+		sun2.position.set(-20, 20, -20);
 		scene.add(sun2);
 
 		renderer = ctx.renderer;
-
-		document.addEventListener('keydown', function (event) {
-			// W Pressed: Toggle wireframe
-			if (event.keyCode === 87) {
-				waterMesh.material.wireframe = !waterMesh.material.wireframe;
-				waterMesh.material.needsUpdate = true;
-			}
-		});
 
 		const effectController = {
 			mouseSize: 20.0,
@@ -341,11 +338,15 @@ void main()	{
 		material.specular = new THREE.Color(0x111111);
 		material.shininess = 50;
 
+		material.normalScale = new Vector2(1);
+
 		// Sets the uniforms with the material values
 		material.uniforms['diffuse'].value = material.color;
 		material.uniforms['specular'].value = material.specular;
 		material.uniforms['shininess'].value = Math.max(material.shininess, 1e-4);
 		material.uniforms['opacity'].value = material.opacity;
+
+		material.uniforms['normalScale'].value = material.normalScale;
 
 		// Defines
 		material.defines.WIDTH = WIDTH.toFixed(1);
@@ -460,6 +461,55 @@ void main()	{
 	ctx.renderer?.domElement.addEventListener('mousemove', onPointerMove);
 	const cam = ctx.camera;
 
+	const snowMaterial = new ShaderMaterial({
+		fragmentShader,
+		vertexShader,
+		side: DoubleSide,
+		uniforms: {
+			trail: {
+				value: null
+			},
+			heightmap: { value: null }
+		}
+	});
+
+	const terrainMaterial = new CustomShaderMaterial({
+		baseMaterial: THREE.MeshStandardMaterial,
+		vertexShader: `
+        varying vec2 vUv;
+        varying vec3 vPosition;
+        uniform sampler2D heightmap;
+        void main() {
+            vUv = uv;
+            float tColor = texture2D(heightmap, vec2(vUv.x, 1.-vUv.y)).x;  
+            vPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+            csm_Position = vec3(position.x, position.y + tColor*1., position.z);
+        }
+    `,
+		fragmentShader: `
+        uniform sampler2D heightmap;
+        varying vec3 vPosition;
+        varying vec2 vUv;
+        void main() {
+            // float heightValue = texture2D(heightmap, vUv).x;
+            float tColor = texture2D(heightmap, vec2(vUv.x, 1.-vUv.y)).x;            
+            vec3 tColorMod = vec3(min(0.5,-tColor*0.1));
+            csm_DiffuseColor = vec4(diffuse-tColorMod, 1.);
+            // csm_DiffuseColor = vec4(vUv, 1.,1.);
+        }
+    `,
+
+		uniforms: {
+			trail: {
+				value: null
+			},
+			heightmap: { value: null }
+		},
+
+		color: 0xceceef,
+		wireframe: false
+	});
+
 	function render() {
 		// Set uniforms: mouse interaction
 		const uniforms = heightmapVariable.material.uniforms;
@@ -487,6 +537,16 @@ void main()	{
 		// Get compute output in custom uniform
 		waterUniforms['heightmap'].value = gpuCompute.getCurrentRenderTarget(heightmapVariable).texture;
 
+		snowMaterial.uniforms.trail.value =
+			gpuCompute.getCurrentRenderTarget(heightmapVariable).texture;
+		snowMaterial.uniforms.heightmap.value =
+			gpuCompute.getCurrentRenderTarget(heightmapVariable).texture;
+
+		terrainMaterial.uniforms.trail.value =
+			gpuCompute.getCurrentRenderTarget(heightmapVariable).texture;
+		terrainMaterial.uniforms.heightmap.value =
+			gpuCompute.getCurrentRenderTarget(heightmapVariable).texture;
+
 		// Render
 		renderer.render(scene, camera);
 	}
@@ -498,12 +558,32 @@ void main()	{
 		renderer.clear();
 		render();
 	});
+
+	let terrainGeometry: BufferGeometry;
+	let terrainPhysicsGeometry: BufferGeometry;
+
+	const img = new Image(); // Create new img element
+
+	// img.src = 'fuji_terrainmap.png';
+	img.src = 'fuji_terraintile.png';
+	img.addEventListener('load', (e) => {
+		const terrain = decodeTerrainFromTile(img);
+		terrainPhysicsGeometry = genMartiniTerrain(terrain, img.width, 50);
+		terrainGeometry = genMartiniTerrain(terrain, img.width, 0);
+	});
 </script>
 
-<T.PerspectiveCamera position={[400, 400, 400]} fov={30} let:ref makeDefault bind:ref={camera}>
+<T.PerspectiveCamera
+	position={[1200, 1000, 400]}
+	fov={30}
+	let:ref
+	makeDefault
+	bind:ref={camera}
+	far={99999}
+>
 	<OrbitControls
 		enableZoom={true}
-		target={{ x: 0, y: 0.5, z: 0 }}
+		target={{ x: 400, y: 0.5, z: 0 }}
 		autoRotate
 		autoRotateSpeed={0.0}
 	/>
@@ -515,3 +595,19 @@ void main()	{
 </T.Mesh>
 
 <Environment files="03_env/belfast_sunset_puresky_4k.hdr" />
+
+{#if terrainGeometry}
+	<T.Mesh material={snowMaterial} rotation={[-DEG2RAD * 90, 0, 0]} position={[-BOUNDS, 0, 0]}>
+		<T.PlaneGeometry args={[BOUNDS, BOUNDS, WIDTH - 1, WIDTH - 1]} />
+	</T.Mesh>
+
+	<T.Mesh
+		receiveShadow
+		geometry={terrainGeometry}
+		position={[BOUNDS * 0.5, 0, -BOUNDS * 0.5]}
+		material={terrainMaterial}
+		scale={[2, 2, 2]}
+	>
+		<!-- <T.MeshStandardMaterial /> -->
+	</T.Mesh>
+{/if}
