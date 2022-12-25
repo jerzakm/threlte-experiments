@@ -5,6 +5,7 @@
   uniform float mouseSize;
   uniform float viscosityConstant;
   uniform float heightCompensation;
+  uniform float intensity;
 
   void main()	{
 
@@ -35,7 +36,7 @@
 
     float newHeight = ( heightmapValue.y ) * 0.999;
 
-    float change = ( cos( mousePhase ) + 1.0 ) * 0.28;
+    float change = ( cos( mousePhase ) + 1.0 ) * intensity;
 
 
     if(change<0.25){
@@ -246,7 +247,7 @@ void main()	{
 	import { default as fragmentShader } from './snowFrag.glsl?raw';
 	import { default as vertexShader } from './snowVert.glsl?raw';
 	import { DEG2RAD } from 'three/src/math/MathUtils';
-	import { AutoColliders, Collider, RigidBody, World } from '@threlte/rapier';
+	import { AutoColliders, Collider, Debug, RigidBody, World } from '@threlte/rapier';
 
 	let playerPosition = [0, 0, 0];
 
@@ -360,7 +361,7 @@ void main()	{
 		waterMesh.matrixAutoUpdate = false;
 		waterMesh.updateMatrix();
 
-		scene.add(waterMesh);
+		// scene.add(waterMesh);
 
 		// THREE.Mesh just for mouse raycasting
 		const geometryRay = new THREE.PlaneGeometry(BOUNDS, BOUNDS, 1, 1);
@@ -371,7 +372,7 @@ void main()	{
 		meshRay.rotation.x = -Math.PI / 2;
 		meshRay.matrixAutoUpdate = false;
 		meshRay.updateMatrix();
-		scene.add(meshRay);
+		// scene.add(meshRay);
 
 		// Creates the gpu computation class and sets it up
 
@@ -393,6 +394,7 @@ void main()	{
 		heightmapVariable.material.uniforms['mouseSize'] = { value: 20.0 };
 		heightmapVariable.material.uniforms['viscosityConstant'] = { value: 0.98 };
 		heightmapVariable.material.uniforms['heightCompensation'] = { value: 0 };
+		heightmapVariable.material.uniforms['intensity'] = { value: 0.28 };
 		heightmapVariable.material.defines.BOUNDS = BOUNDS.toFixed(1);
 
 		const error = gpuCompute.init();
@@ -474,6 +476,8 @@ void main()	{
 		}
 	});
 
+	const snowNormal = useTexture('snow_normal.png');
+
 	const terrainMaterial = new CustomShaderMaterial({
 		baseMaterial: THREE.MeshStandardMaterial,
 		vertexShader: `
@@ -485,6 +489,7 @@ void main()	{
             float tColor = texture2D(heightmap, vec2(vUv.x, 1.-vUv.y)).x;  
             vPosition = (modelMatrix * vec4(position, 1.0)).xyz;
             csm_Position = vec3(position.x, position.y + tColor*1., position.z);
+            // csm_Normal = vec3(objectNormal.xyz);
         }
     `,
 		fragmentShader: `
@@ -495,10 +500,20 @@ void main()	{
             // float heightValue = texture2D(heightmap, vUv).x;
             float tColor = texture2D(heightmap, vec2(vUv.x, 1.-vUv.y)).x;            
             vec3 tColorMod = vec3(min(0.5,-tColor*0.1));
-            csm_DiffuseColor = vec4(diffuse-tColorMod, 1.);
+            tColorMod.b*= 0.9;
+            csm_DiffuseColor = vec4(diffuse-tColorMod*1.3, 1.);
+            
+            // UVS
             // csm_DiffuseColor = vec4(vUv, 1.,1.);
+
+
+            // DEFORM debug
+            // csm_DiffuseColor = vec4(tColorMod, 1.);
         }
     `,
+
+		// normalMap: snowNormal,
+		// normalScale: new THREE.Vector2(2.1, 2.1),
 
 		uniforms: {
 			trail: {
@@ -513,27 +528,76 @@ void main()	{
 
 	let terrainMesh: THREE.Mesh;
 
+	let balls = [];
+
+	let testBall;
+
+	let test = 0;
+
+	let buttons: { [key: string]: boolean } = {};
+
+	window.addEventListener('keydown', (e) => {
+		buttons[e.key] = true;
+		buttons = buttons;
+	});
+
+	window.addEventListener('keyup', (e) => {
+		buttons[e.key] = false;
+		buttons = buttons;
+	});
+
+	let bt = { x: 0, y: 0, z: 0 };
+
 	function render() {
-		// Set uniforms: mouse interaction
 		const uniforms = heightmapVariable.material.uniforms;
-		if (mouseMoved) {
-			raycaster.setFromCamera(mouseCoords, $cam);
 
-			// const intersects = raycaster.intersectObject(meshRay);
-			const intersects = raycaster.intersectObject(terrainMesh);
+		test++;
+		if (testBall) {
+			const point = testBall.translation();
+			bt = point;
+			uniforms['mousePos'].value.set(point.x * 2 - 256, point.z * 2 - 256);
+			uniforms['intensity'].value = 0.08;
 
-			if (intersects.length > 0) {
-				const point = intersects[0].point;
-				playerPosition = [point.x, point.y - 0.5, point.z];
-				uniforms['mousePos'].value.set(point.x - BOUNDS, point.z);
-			} else {
-				uniforms['mousePos'].value.set(10000, 10000);
+			const impulseVector = {
+				x: 0,
+				y: 0,
+				z: 0
+			};
+
+			if (buttons.s) {
+				impulseVector.z += 1000;
+			}
+			if (buttons.w) {
+				impulseVector.z -= 1000;
 			}
 
-			mouseMoved = false;
-		} else {
-			uniforms['mousePos'].value.set(10000, 10000);
+			if (buttons.d) {
+				impulseVector.x += 1000;
+			}
+			if (buttons.a) {
+				impulseVector.x -= 1000;
+			}
+			testBall.applyImpulse(impulseVector, true);
 		}
+		// Set uniforms: mouse interaction
+		// if (mouseMoved) {
+		// 	raycaster.setFromCamera(mouseCoords, $cam);
+
+		// 	// const intersects = raycaster.intersectObject(meshRay);
+		// 	const intersects = raycaster.intersectObject(terrainMesh);
+
+		// 	if (intersects.length > 0) {
+		// 		const point = intersects[0].point;
+		// 		playerPosition = [point.x, point.y - 0.5, point.z];
+		// 		uniforms['mousePos'].value.set(point.x * 2 - 256, point.z * 2 - 256);
+		// 	} else {
+		// 		uniforms['mousePos'].value.set(10000, 10000);
+		// 	}
+
+		// 	mouseMoved = false;
+		// } else {
+		// 	uniforms['mousePos'].value.set(10000, 10000);
+		// }
 
 		// Do the gpu computation
 		gpuCompute.compute();
@@ -555,12 +619,26 @@ void main()	{
 		renderer.render(scene, camera);
 	}
 
-	useFrame(() => {
+	let t = 0;
+
+	useFrame(({ clock }) => {
 		const renderer = ctx.renderer;
 		if (!renderer) return;
 		renderer.autoClear = false;
 		renderer.clear();
 		render();
+
+		t += clock.getDelta() * 1000;
+
+		if (balls.length < 1) {
+			// console.log('ballspawn');
+			balls.push({
+				x: 200,
+				y: 80,
+				z: 80
+			});
+			balls = balls;
+		}
 	});
 
 	let terrainGeometry: BufferGeometry;
@@ -578,7 +656,7 @@ void main()	{
 </script>
 
 <T.PerspectiveCamera
-	position={[1200, 1000, 400]}
+	position={[200 + bt.x / 2, 100, 200 + bt.z / 2]}
 	fov={30}
 	let:ref
 	makeDefault
@@ -587,28 +665,56 @@ void main()	{
 >
 	<OrbitControls
 		enableZoom={true}
-		target={{ x: 400, y: 0.5, z: 0 }}
+		target={{ x: 0 + bt.x, y: 0.5, z: bt.z }}
 		autoRotate
 		autoRotateSpeed={0.0}
 	/>
 </T.PerspectiveCamera>
 
-<T.Mesh position={playerPosition}>
+<!-- <T.Mesh position={playerPosition}>
 	<T.SphereGeometry args={[10]} />
 	<T.MeshStandardMaterial color={'red'} />
-</T.Mesh>
+</T.Mesh> -->
 
 <Environment files="03_env/belfast_sunset_puresky_4k.hdr" isBackground />
 
-{#if terrainGeometry}
-	<T.Mesh
-		receiveShadow
-		geometry={terrainGeometry}
-		position={[BOUNDS * 0.5, 0, -BOUNDS * 0.5]}
-		material={terrainMaterial}
-		scale={[2, 2, 2]}
-		bind:ref={terrainMesh}
-	>
-		<!-- <T.MeshStandardMaterial /> -->
-	</T.Mesh>
-{/if}
+<World
+	gravity={{
+		x: 0,
+		y: -50,
+		z: 0
+	}}
+>
+	{#if terrainGeometry}
+		<T.Mesh
+			receiveShadow
+			geometry={terrainGeometry}
+			material={terrainMaterial}
+			bind:ref={terrainMesh}
+			position={[0, 6, 0]}
+		>
+			<!-- <T.MeshStandardMaterial /> -->
+		</T.Mesh>
+
+		<Collider
+			shape={'trimesh'}
+			args={[terrainPhysicsGeometry.attributes.position.array, terrainPhysicsGeometry.index.array]}
+		/>
+		{#each balls as ball}
+			<RigidBody position={ball} type="dynamic" bind:rigidBody={testBall}>
+				<AutoColliders shape={'ball'} restitution={0.6}>
+					<T.Mesh castShadow receiveShadow>
+						<T.SphereGeometry args={[10, 20, 20]} />
+						<T.MeshStandardMaterial color={'blue'} />
+					</T.Mesh>
+				</AutoColliders>
+			</RigidBody>
+		{/each}
+	{/if}
+
+	<!-- <Debug depthTest={true} depthWrite={true} side={DoubleSide} /> -->
+</World>
+
+<!-- <T.DirectionalLight position={[3, 10, 10]} intensity={0.5} castShadow />
+<T.DirectionalLight position={[-3, 10, -10]} intensity={0.2} castShadow />
+<T.AmbientLight intensity={0.2} /> -->
