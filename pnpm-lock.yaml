@@ -36,6 +36,7 @@ specifiers:
   tslib: ^2.4.1
   typescript: ^4.9.4
   vite: ^4.0.2
+  xatlas-web: ^0.1.0
 
 dependencies:
   '@mapbox/martini': 0.2.0
@@ -43,6 +44,7 @@ dependencies:
   svelte-knobby: 0.3.4_svelte@3.55.0
   three-csm: 3.1.1
   three-custom-shader-material: 5.0.0_three@0.147.0
+  xatlas-web: 0.1.0
 
 devDependencies:
   '@dimforge/rapier3d-compat': 0.10.0
@@ -2330,6 +2332,10 @@ packages:
   /wrappy/1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
     dev: true
+
+  /xatlas-web/0.1.0:
+    resolution: {integrity: sha512-PprVfuXbaIskxLTLBUQRaWfgSy9xUQqAMIRooOw0P6NYqwgh6T0voeer6+Z5M7AFt5SGXUybuww/uDGs1yw8vQ==}
+    dev: false
 
   /xtend/4.0.2:
     resolution: {integrity: sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ==}
