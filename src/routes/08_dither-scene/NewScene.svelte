@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { useFrame, useThrelte, T, OrbitControls } from '@threlte/core';
 	import { get } from 'svelte/store';
-	import type { PerspectiveCamera } from 'three';
+	import type { MeshBasicMaterial, PerspectiveCamera, PlaneGeometry } from 'three';
 	import * as THREE from 'three';
 
 	import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
@@ -11,6 +11,7 @@
 	import { default as noiseVertex } from './noiseMaterialVS.glsl?raw';
 	import { default as ditherFrag } from './ditherPass.glsl?raw';
 	import { default as fragmentDitherTexture } from './ditherTexture.glsl?raw';
+	import { DEG2RAD } from 'three/src/math/MathUtils';
 	const fragmentShaderScreen = `  
   varying vec2 vUv;
   uniform sampler2D tDiffuse;
