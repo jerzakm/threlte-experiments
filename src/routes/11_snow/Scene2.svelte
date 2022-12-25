@@ -246,6 +246,7 @@ void main()	{
 	import { default as fragmentShader } from './snowFrag.glsl?raw';
 	import { default as vertexShader } from './snowVert.glsl?raw';
 	import { DEG2RAD } from 'three/src/math/MathUtils';
+	import { AutoColliders, Collider, RigidBody, World } from '@threlte/rapier';
 
 	let playerPosition = [0, 0, 0];
 
@@ -510,18 +511,21 @@ void main()	{
 		wireframe: false
 	});
 
+	let terrainMesh: THREE.Mesh;
+
 	function render() {
 		// Set uniforms: mouse interaction
 		const uniforms = heightmapVariable.material.uniforms;
 		if (mouseMoved) {
 			raycaster.setFromCamera(mouseCoords, $cam);
 
-			const intersects = raycaster.intersectObject(meshRay);
+			// const intersects = raycaster.intersectObject(meshRay);
+			const intersects = raycaster.intersectObject(terrainMesh);
 
 			if (intersects.length > 0) {
 				const point = intersects[0].point;
-				playerPosition = [point.x, 0, point.z];
-				uniforms['mousePos'].value.set(point.x, point.z);
+				playerPosition = [point.x, point.y - 0.5, point.z];
+				uniforms['mousePos'].value.set(point.x - BOUNDS, point.z);
 			} else {
 				uniforms['mousePos'].value.set(10000, 10000);
 			}
@@ -594,19 +598,16 @@ void main()	{
 	<T.MeshStandardMaterial color={'red'} />
 </T.Mesh>
 
-<Environment files="03_env/belfast_sunset_puresky_4k.hdr" />
+<Environment files="03_env/belfast_sunset_puresky_4k.hdr" isBackground />
 
 {#if terrainGeometry}
-	<T.Mesh material={snowMaterial} rotation={[-DEG2RAD * 90, 0, 0]} position={[-BOUNDS, 0, 0]}>
-		<T.PlaneGeometry args={[BOUNDS, BOUNDS, WIDTH - 1, WIDTH - 1]} />
-	</T.Mesh>
-
 	<T.Mesh
 		receiveShadow
 		geometry={terrainGeometry}
 		position={[BOUNDS * 0.5, 0, -BOUNDS * 0.5]}
 		material={terrainMaterial}
 		scale={[2, 2, 2]}
+		bind:ref={terrainMesh}
 	>
 		<!-- <T.MeshStandardMaterial /> -->
 	</T.Mesh>
