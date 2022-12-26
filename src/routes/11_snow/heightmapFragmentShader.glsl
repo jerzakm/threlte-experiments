@@ -45,7 +45,7 @@ void main() {
     // newHeight += mousePhase2;
   }
 
-  newHeight = max(-4., newHeight);
+  newHeight = max(-2.5, newHeight);
 
   heightmapValue.y = heightmapValue.x;
   heightmapValue.x = newHeight;

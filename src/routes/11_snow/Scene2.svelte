@@ -17,13 +17,12 @@
 	import { AutoColliders, Collider, RigidBody, World } from '@threlte/rapier';
 	import { default as fragmentShader } from './snowFrag.glsl?raw';
 	import { default as vertexShader } from './snowVert.glsl?raw';
+	import Postprocessing from './Postprocessing.svelte';
 
 	const WIDTH = 1024;
 	const BOUNDS = 512;
 
 	let camera, scene, renderer;
-	let mouseMoved = false;
-	const mouseCoords = new THREE.Vector2();
 
 	let waterMesh;
 	let meshRay;
@@ -38,11 +37,7 @@
 	const ctx = useThrelte();
 	init();
 	function init() {
-		// camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 3000);
-		// camera.position.set(0, 200, 350);
-		// camera.lookAt(0, 0, 0);
-
-		scene = new THREE.Scene();
+		scene = ctx.scene;
 
 		const sun = new THREE.DirectionalLight(0xffffff, 1.0);
 		sun.position.set(300, 400, 175);
@@ -71,23 +66,6 @@
 			vertexShader: heightVertexShader,
 			fragmentShader: THREE.ShaderChunk['meshphong_frag']
 		});
-
-		material.lights = true;
-
-		// Material attributes from THREE.MeshPhongMaterial
-		material.color = new THREE.Color(materialColor);
-		material.specular = new THREE.Color(0x111111);
-		material.shininess = 50;
-
-		material.normalScale = new Vector2(1);
-
-		// Sets the uniforms with the material values
-		material.uniforms['diffuse'].value = material.color;
-		material.uniforms['specular'].value = material.specular;
-		material.uniforms['shininess'].value = Math.max(material.shininess, 1e-4);
-		material.uniforms['opacity'].value = material.opacity;
-
-		material.uniforms['normalScale'].value = material.normalScale;
 
 		// Defines
 		material.defines.WIDTH = WIDTH.toFixed(1);
@@ -224,6 +202,12 @@
             tColorMod.b*= 0.9;
             csm_DiffuseColor = vec4(diffuse-tColorMod*1.3, 1.);            
 
+
+
+            float emMod = step(rand(vUv),0.005);
+
+            // csm_Emissive = vec3(emMod);
+
             
             // UVS
             // csm_DiffuseColor = vec4(vUv, 1.,1.);
@@ -235,9 +219,9 @@
     `,
 
 		normalMap: snowNormal,
-		normalScale: new THREE.Vector2(1.1, 1.1),
-		envMapIntensity: 0.8,
-		emissiveIntensity: 2,
+		normalScale: new THREE.Vector2(0.1, 0.1),
+		envMapIntensity: 0.2,
+		emissiveIntensity: 0.5,
 		wireframe: false,
 
 		uniforms: {
@@ -354,11 +338,18 @@
 	});
 </script>
 
-<T.PerspectiveCamera let:ref position={[200 + bt.x / 2, 100, 200 + bt.z / 2]} fov={30} far={99999}>
+<T.PerspectiveCamera
+	let:ref
+	position={[200 + bt.x / 2, 100, 200 + bt.z / 2]}
+	fov={20}
+	far={99999}
+	makeDefault
+	bind:ref={camera}
+>
 	<OrbitControls enableZoom={true} target={{ x: 0 + bt.x, y: 0.5, z: bt.z }} />
 </T.PerspectiveCamera>
 
-<T.PerspectiveCamera position={[200, 50, 200]} fov={30} far={99999} makeDefault bind:ref={camera}>
+<T.PerspectiveCamera position={[200, 50, 200]} fov={30} far={99999}>
 	<OrbitControls enableZoom={true} target={0} autoRotate autoRotateSpeed={0.0} />
 </T.PerspectiveCamera>
 
@@ -402,6 +393,8 @@
 	<!-- <Debug depthTest={true} depthWrite={true} side={DoubleSide} /> -->
 </World>
 
-<T.DirectionalLight position={[40, 50, 50]} intensity={0.5} castShadow />
+<T.DirectionalLight position={[40, 50, 50]} intensity={0.2} castShadow />
 <T.DirectionalLight position={[200, 80, 200]} intensity={0.2} castShadow />
-<!-- <T.AmbientLight intensity={0.2} /> -->
+<T.AmbientLight intensity={0.2} />
+
+<Postprocessing />
