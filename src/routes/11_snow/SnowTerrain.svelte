@@ -16,6 +16,7 @@
 
 	import { default as fragmentShader } from './snowFrag.glsl?raw';
 	import { default as vertexShader } from './snowVert.glsl?raw';
+	import { Vector3 } from 'three';
 
 	export let terrainGeometry: any;
 	export let testBall: any;
@@ -23,7 +24,7 @@
 	const WIDTH = 1024;
 	const BOUNDS = 512;
 
-	const { camera, scene, renderer } = useThrelte();
+	const { scene, renderer } = useThrelte();
 
 	let waterMesh;
 	let meshRay;
@@ -103,7 +104,15 @@
 
 		gpuCompute.setVariableDependencies(heightmapVariable, [heightmapVariable]);
 
-		heightmapVariable.material.uniforms['mousePos'] = { value: new THREE.Vector2(10000, 10000) };
+		heightmapVariable.material.uniforms['objects'] = {
+			value: []
+		};
+
+		// fill up vector
+		for (let i = 0; i < 512; i++) {
+			heightmapVariable.material.uniforms['objects'].value.push(new Vector3(0, 0, 0));
+		}
+
 		heightmapVariable.material.uniforms['mouseSize'] = { value: 20.0 };
 		heightmapVariable.material.uniforms['viscosityConstant'] = { value: 0.98 };
 		heightmapVariable.material.uniforms['heightCompensation'] = { value: 0 };
@@ -215,10 +224,15 @@
 	function render() {
 		const uniforms = heightmapVariable.material.uniforms;
 
-		if (testBall) {
-			const point = testBall.translation();
+		if (testBall.rigidBody) {
+			const point = testBall.rigidBody.translation();
 
-			uniforms['mousePos'].value.set(point.x * 2 - 256, point.z * 2 - 256);
+			uniforms['objects'].value[0].set(point.x * 2 - 256, point.z * 2 - 256, testBall.size);
+			uniforms['objects'].value[1].set(
+				point.x * 2 + 20 - 256,
+				point.z * 2 + 20 - 256,
+				testBall.size
+			);
 			uniforms['intensity'].value = 0.08;
 		}
 

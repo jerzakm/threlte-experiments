@@ -17,7 +17,10 @@
 		}
 	];
 
-	let testBall;
+	let testBall = {
+		size: 2,
+		rigidBody: undefined
+	};
 
 	let buttons: { [key: string]: boolean } = {};
 
@@ -31,29 +34,14 @@
 		buttons = buttons;
 	});
 
-	let bt = { x: 0, y: 0, z: 0 };
-
-	let t = 0;
-
 	useFrame(({ clock, composer }) => {
-		t += clock.getDelta() * 1000;
-
-		if (balls.length < 1) {
-			balls.push({
-				x: 200,
-				y: 80,
-				z: 80
-			});
-			balls = balls;
-		}
-
 		const impulseVector = {
 			x: 0,
 			y: 0,
 			z: 0
 		};
 
-		const impulseStrength = 100;
+		const impulseStrength = 2 ** testBall.size;
 
 		if (buttons.s) {
 			impulseVector.z += impulseStrength;
@@ -68,8 +56,8 @@
 		if (buttons.a) {
 			impulseVector.x -= impulseStrength;
 		}
-		if (testBall) {
-			testBall.applyImpulse(impulseVector, true);
+		if (testBall.rigidBody) {
+			testBall.rigidBody.applyImpulse(impulseVector, true);
 		}
 	});
 
@@ -87,18 +75,8 @@
 	});
 </script>
 
-<T.PerspectiveCamera
-	let:ref
-	position={[200 + bt.x / 2, 100, 200 + bt.z / 2]}
-	fov={20}
-	far={99999}
-	makeDefault
->
-	<OrbitControls enableZoom={true} target={{ x: 0 + bt.x, y: 0.5, z: bt.z }} />
-</T.PerspectiveCamera>
-
-<T.PerspectiveCamera position={[200, 50, 200]} fov={30} far={99999}>
-	<OrbitControls enableZoom={true} autoRotate autoRotateSpeed={0.0} />
+<T.PerspectiveCamera let:ref position={[200, 150, 200]} fov={30} far={99999} makeDefault>
+	<OrbitControls enableZoom={true} target={{ x: balls[0].x, y: 0.5, z: balls[0].z }} />
 </T.PerspectiveCamera>
 
 <Environment files="03_env/belfast_sunset_puresky_4k.hdr" isBackground />
@@ -116,10 +94,10 @@
 			args={[terrainPhysicsGeometry.attributes.position.array, terrainPhysicsGeometry.index.array]}
 		/>
 		{#each balls as ball}
-			<RigidBody position={ball} type="dynamic" bind:rigidBody={testBall}>
+			<RigidBody position={ball} type="dynamic" bind:rigidBody={testBall.rigidBody}>
 				<AutoColliders shape={'ball'} restitution={0.6}>
 					<T.Mesh castShadow receiveShadow>
-						<T.SphereGeometry args={[5, 15, 15]} />
+						<T.SphereGeometry args={[testBall.size, 15, 15]} />
 						<T.MeshStandardMaterial color={'blue'} />
 					</T.Mesh>
 				</AutoColliders>
