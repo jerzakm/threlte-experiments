@@ -5,22 +5,29 @@
 	import { Environment } from '@threlte/extras';
 	import type { BufferGeometry } from 'three';
 
-	import { AutoColliders, Collider, RigidBody, World } from '@threlte/rapier';
+	import { AutoColliders, Collider, Debug, World, RigidBody } from '@threlte/rapier';
 	import Postprocessing from './Postprocessing.svelte';
 	import SnowTerrain from './SnowTerrain.svelte';
+	import { DoubleSide } from 'three';
+	import type { RigidBody as RapierRigidBody } from '@dimforge/rapier3d-compat';
 
-	let balls = [
+	const debug = false;
+
+	interface Ball {
+		startingPosition: { x: number; y: number; z: number };
+		size: number;
+		rigidBody?: RapierRigidBody;
+	}
+
+	let balls: Ball[] = [
 		{
-			x: 200,
-			y: 35,
-			z: 80
+			startingPosition: { x: 200, y: 100, z: 80 },
+			size: 5,
+			rigidBody: undefined
 		}
 	];
 
-	let testBall = {
-		size: 2,
-		rigidBody: undefined
-	};
+	let testBall = balls[0];
 
 	let buttons: { [key: string]: boolean } = {};
 
@@ -34,6 +41,8 @@
 		buttons = buttons;
 	});
 
+	let spawnTimer = 0;
+
 	useFrame(({ clock, composer }) => {
 		const impulseVector = {
 			x: 0,
@@ -41,7 +50,7 @@
 			z: 0
 		};
 
-		const impulseStrength = 2 ** testBall.size;
+		const impulseStrength = 2 ** (testBall.size + 1);
 
 		if (buttons.s) {
 			impulseVector.z += impulseStrength;
@@ -59,24 +68,40 @@
 		if (testBall.rigidBody) {
 			testBall.rigidBody.applyImpulse(impulseVector, true);
 		}
+
+		spawnTimer += clock.getDelta() * 1000;
+
+		if (balls.length < 1 && spawnTimer > 1) {
+			balls.push({
+				startingPosition: { x: 20 + Math.random() * 200, y: 50, z: 20 + Math.random() * 200 },
+				size: 2 + Math.random() * 5,
+				rigidBody: undefined
+			});
+			balls = balls;
+
+			spawnTimer = 0;
+		}
 	});
 
 	let terrainGeometry: BufferGeometry;
 	let terrainPhysicsGeometry: BufferGeometry;
 
+	let terrain: Float32Array;
+
 	const img = new Image(); // Create new img element
 	img.src = 'fuji_terraintile.png';
 	img.addEventListener('load', (e) => {
-		const terrain = decodeTerrainFromTile(img);
+		terrain = decodeTerrainFromTile(img);
 		terrainPhysicsGeometry = genMartiniTerrain(terrain, img.width, 50);
 		terrainGeometry = genMartiniTerrain(terrain, img.width, 10);
-
-		console.log(terrainGeometry.attributes.uv.array.length);
 	});
 </script>
 
 <T.PerspectiveCamera let:ref position={[200, 150, 200]} fov={30} far={99999} makeDefault>
-	<OrbitControls enableZoom={true} target={{ x: balls[0].x, y: 0.5, z: balls[0].z }} />
+	<OrbitControls
+		enableZoom={true}
+		target={{ x: testBall.startingPosition.x, y: 0.5, z: testBall.startingPosition.z }}
+	/>
 </T.PerspectiveCamera>
 
 <Environment files="03_env/belfast_sunset_puresky_4k.hdr" isBackground />
@@ -88,16 +113,21 @@
 		z: 0
 	}}
 >
+	<!-- World borders -->
+	<Collider shape={'cuboid'} args={[128, 300, 5]} position={{ x: 128, y: 150, z: 0 }} />
+	<Collider shape={'cuboid'} args={[128, 300, 5]} position={{ x: 128, y: 150, z: 256 }} />
+	<Collider shape={'cuboid'} args={[5, 300, 128]} position={{ x: 0, y: 150, z: 128 }} />
+	<Collider shape={'cuboid'} args={[5, 300, 128]} position={{ x: 256, y: 150, z: 128 }} />
 	{#if terrainPhysicsGeometry}
 		<Collider
 			shape={'trimesh'}
 			args={[terrainPhysicsGeometry.attributes.position.array, terrainPhysicsGeometry.index.array]}
 		/>
 		{#each balls as ball}
-			<RigidBody position={ball} type="dynamic" bind:rigidBody={testBall.rigidBody}>
+			<RigidBody position={ball.startingPosition} type="dynamic" bind:rigidBody={ball.rigidBody}>
 				<AutoColliders shape={'ball'} restitution={0.6}>
 					<T.Mesh castShadow receiveShadow>
-						<T.SphereGeometry args={[testBall.size, 15, 15]} />
+						<T.SphereGeometry args={[ball.size, 15, 15]} />
 						<T.MeshStandardMaterial color={'blue'} />
 					</T.Mesh>
 				</AutoColliders>
@@ -105,7 +135,9 @@
 		{/each}
 	{/if}
 
-	<!-- <Debug depthTest={true} depthWrite={true} side={DoubleSide} /> -->
+	{#if debug}
+		<Debug depthTest={true} depthWrite={true} side={DoubleSide} />
+	{/if}
 </World>
 
 <T.DirectionalLight position={[40, 50, 50]} intensity={0.2} castShadow />
@@ -115,5 +147,5 @@
 <Postprocessing />
 
 {#if terrainGeometry}
-	<SnowTerrain {terrainGeometry} {testBall} />
+	<SnowTerrain {terrainGeometry} {testBall} {balls} />
 {/if}

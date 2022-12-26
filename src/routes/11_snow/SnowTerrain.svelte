@@ -17,9 +17,17 @@
 	import { default as fragmentShader } from './snowFrag.glsl?raw';
 	import { default as vertexShader } from './snowVert.glsl?raw';
 	import { Vector3 } from 'three';
+	import type { RigidBody as RapierRigidBody } from '@dimforge/rapier3d-compat';
+
+	interface Ball {
+		startingPosition: { x: number; y: number; z: number };
+		size: number;
+		rigidBody?: RapierRigidBody;
+	}
 
 	export let terrainGeometry: any;
 	export let testBall: any;
+	export let balls: Ball[];
 
 	const WIDTH = 1024;
 	const BOUNDS = 512;
@@ -224,17 +232,15 @@
 	function render() {
 		const uniforms = heightmapVariable.material.uniforms;
 
-		if (testBall.rigidBody) {
-			const point = testBall.rigidBody.translation();
-
-			uniforms['objects'].value[0].set(point.x * 2 - 256, point.z * 2 - 256, testBall.size);
-			uniforms['objects'].value[1].set(
-				point.x * 2 + 20 - 256,
-				point.z * 2 + 20 - 256,
-				testBall.size
-			);
-			uniforms['intensity'].value = 0.08;
+		for (let i = 0; i < balls.length; i++) {
+			const ball = balls[i];
+			if (ball.rigidBody) {
+				const point = ball.rigidBody.translation();
+				uniforms['objects'].value[i].set(point.x * 2 - 256, point.z * 2 - 256, ball.size);
+			}
 		}
+
+		uniforms['intensity'].value = 0.08;
 
 		// Do the gpu computation
 		gpuCompute.compute();
