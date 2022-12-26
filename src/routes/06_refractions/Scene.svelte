@@ -2,12 +2,13 @@
 	import {
 		AmbientLight,
 		DirectionalLight,
-		Mesh,
 		OrbitControls,
-		PerspectiveCamera,
 		useFrame,
-		useThrelte
+		useThrelte,
+		T
 	} from '@threlte/core';
+	import { Grid } from '@threlte/extras';
+	import { get } from 'svelte/store';
 	import * as THREE from 'three';
 
 	import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry';
@@ -64,8 +65,6 @@
 
 	const { renderer, scene } = useThrelte();
 
-	let camera: any;
-
 	const refractionMaterial = new THREE.ShaderMaterial({
 		uniforms: {
 			uRefractPower: { value: 0.2 },
@@ -80,39 +79,36 @@
 		fragmentShader
 	});
 
-	let boxCount = 10;
-
-	useFrame(({ clock }) => {
+	useFrame(({ clock, camera }) => {
 		if (!renderer) return;
+
 		renderer.setRenderTarget(renderTarget);
-		renderer.render(scene, camera);
+		renderer.render(scene, get(camera));
 		renderer.setRenderTarget(null);
-		renderer.render(scene, camera);
+		renderer.render(scene, get(camera));
 	});
 </script>
 
-<PerspectiveCamera position={{ x: 70, y: 20, z: 100 }} fov={60} near={1} far={2000} bind:camera>
+<T.PerspectiveCamera position={[70, 20, 100]} fov={40} near={1} far={2000} makeDefault>
 	<OrbitControls autoRotate={true} enableZoom={true} target={{ x: 70, y: 0, z: 0 }} />
-</PerspectiveCamera>
-
-<!-- <Environment path="/03_env/" files="spaichingen_hill_1k.hdr" isBackground /> -->
+</T.PerspectiveCamera>
 
 {#if textGeo}
-	<Mesh material={refractionMaterial} geometry={textGeo} />
-	<Mesh
+	<T.Mesh material={refractionMaterial} geometry={textGeo} />
+	<T.Mesh
 		material={new THREE.MeshStandardMaterial({ color: lospec[15] })}
 		geometry={textGeo2}
-		position={{ x: -0, z: -30 }}
+		position={[0, 0, -20]}
 	/>
 {/if}
 
-<Mesh
+<T.Mesh
 	material={new THREE.MeshStandardMaterial({ color: 0x000000, side: THREE.DoubleSide })}
 	geometry={new THREE.SphereGeometry(500, 500)}
-	position={{ x: 0, y: 0, z: 0 }}
 />
 
-<HelperGrid />
+<!-- <HelperGrid /> -->
+<Grid cellColor={'white'} cellSize={5} infiniteGrid sectionSize={0} fadeDistance={500} />
 
 <DirectionalLight position={{ x: 15, y: 5, z: 10 }} intensity={0.7} />
 <DirectionalLight position={{ x: 5, y: 5, z: -10 }} intensity={0.7} />
