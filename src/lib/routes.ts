@@ -7,14 +7,14 @@ export const routes = [
 		name: 'Better fog',
 		href: '/02_better-fog'
 	},
-	{
-		name: 'Envmap component',
-		href: '/03_env-component'
-	},
-	{
-		name: 'Helper grid',
-		href: '/04_helper-grid'
-	},
+	// {
+	// 	name: 'Envmap component',
+	// 	href: '/03_env-component'
+	// },
+	// {
+	// 	name: 'Helper grid',
+	// 	href: '/04_helper-grid'
+	// },
 	{
 		name: 'Physical text',
 		href: '/05_physics-text'
@@ -22,5 +22,13 @@ export const routes = [
 	{
 		name: 'Refractions',
 		href: '/06_refractions'
+	},
+	{
+		name: 'Terrain with rapier, martini + csm',
+		href: '/10_martini'
+	},
+	{
+		name: 'RDR-like interactive snow',
+		href: '/11_snow'
 	}
 ];
