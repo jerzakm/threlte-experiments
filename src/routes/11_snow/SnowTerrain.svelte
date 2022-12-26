@@ -1,33 +1,31 @@
 <script lang="ts">
 	import { useFrame, useTexture } from '@threlte/core';
-	import { MeshStandardMaterial } from 'three';
+	import { T, useThrelte } from '@threlte/core';
+	import * as THREE from 'three';
+	import { GPUComputationRenderer } from 'three/examples/jsm/misc/GPUComputationRenderer.js';
+	import { DoubleSide, ShaderMaterial, Vector3, MeshStandardMaterial } from 'three';
+	import type { RigidBody as TRigidBody, Collider as TCollider } from '@dimforge/rapier3d-compat';
 	import CustomShaderMaterial from 'three-custom-shader-material/vanilla';
 
+	/* SHADERS */
+	import { default as fragmentShader } from './snowFrag.glsl?raw';
+	import { default as vertexShader } from './snowVert.glsl?raw';
 	import { default as heightmapFragmentShader } from './heightmapFragmentShader.glsl?raw';
 	import { default as heightVertexShader } from './heightVertexShader.glsl?raw';
 	import { default as readHeightFragmentShader } from './readHeightFragmentShader.glsl?raw';
 	import { default as smoothFragmentShader } from './smoothFragmentShader.glsl?raw';
 
-	import { T, useThrelte } from '@threlte/core';
-	import * as THREE from 'three';
-	import { GPUComputationRenderer } from 'three/examples/jsm/misc/GPUComputationRenderer.js';
-
-	import { DoubleSide, ShaderMaterial } from 'three';
-
-	import { default as fragmentShader } from './snowFrag.glsl?raw';
-	import { default as vertexShader } from './snowVert.glsl?raw';
-	import { Vector3 } from 'three';
-	import type { RigidBody as RapierRigidBody } from '@dimforge/rapier3d-compat';
-
 	interface Ball {
 		startingPosition: { x: number; y: number; z: number };
 		size: number;
-		rigidBody?: RapierRigidBody;
+		rigidBody?: TRigidBody;
 	}
 
 	export let terrainGeometry: any;
 	export let testBall: any;
 	export let balls: Ball[];
+
+	export let terrainCollider: TCollider;
 
 	const WIDTH = 1024;
 	const BOUNDS = 512;
@@ -104,11 +102,15 @@
 			gpuCompute.setDataType(THREE.HalfFloatType);
 		}
 
-		const heightmap0 = gpuCompute.createTexture();
+		const starterHeightmap = gpuCompute.createTexture();
 
-		fillTexture(heightmap0);
+		fillTexture(starterHeightmap);
 
-		heightmapVariable = gpuCompute.addVariable('heightmap', heightmapFragmentShader, heightmap0);
+		heightmapVariable = gpuCompute.addVariable(
+			'heightmap',
+			heightmapFragmentShader,
+			starterHeightmap
+		);
 
 		gpuCompute.setVariableDependencies(heightmapVariable, [heightmapVariable]);
 
@@ -197,11 +199,12 @@
       varying vec3 vPosition;      
       void main() {
           float tColor = texture2D(heightmap, vec2(vUv.x, 1.-vUv.y)).x;            
-          vec3 tColorMod = vec3(min(0.5,-tColor*0.1));
+          float tColorVal = min(0.5,-tColor*0.1);
+          vec3 tColorMod = vec3(tColorVal, tColorVal, tColorVal*0.5);
           tColorMod.b*= 0.9;
-          csm_DiffuseColor = vec4(diffuse-tColorMod*1.3, 1.);            
+          csm_DiffuseColor = vec4(diffuse-tColorMod, 1.);            
           // DEFORM debug
-          // csm_DiffuseColor = vec4(1.- tColor*0.25,tColor*0.2, 1., 1.);
+          // csm_DiffuseColor = vec4(1.+ tColor*0.5,0., 0.-tColor*0.5, 1.);
       }
   `,
 
@@ -229,21 +232,40 @@
 
 	let terrainMesh: THREE.Mesh;
 
+	// performance, can render every x frame
+	let renderToggle = 0;
+	const renderToggleMod = 1;
+
 	function render() {
+		renderToggle++;
 		const uniforms = heightmapVariable.material.uniforms;
 
-		for (let i = 0; i < balls.length; i++) {
-			const ball = balls[i];
-			if (ball.rigidBody) {
-				const point = ball.rigidBody.translation();
-				uniforms['objects'].value[i].set(point.x * 2 - 256, point.z * 2 - 256, ball.size);
+		if (renderToggle % renderToggleMod == 0) {
+			for (let i = 0; i < balls.length; i++) {
+				const ball = balls[i];
+				if (ball.rigidBody) {
+					const bCollider = ball.rigidBody.collider(0);
+
+					const point = bCollider.translation();
+
+					const collisionHackVal = 0.5;
+					point.y -= collisionHackVal;
+
+					bCollider.setTranslation(point);
+
+					const collision = ball.rigidBody.collider(0).contactCollider(terrainCollider, 6);
+					uniforms['objects'].value[i].set(
+						point.x * 2 - 256,
+						point.z * 2 - 256,
+						ball.size * (collision ? 1 : 0)
+					);
+					point.y += collisionHackVal;
+					bCollider.setTranslation(point);
+				}
 			}
+			uniforms['intensity'].value = 0.2;
+			gpuCompute.compute();
 		}
-
-		uniforms['intensity'].value = 0.08;
-
-		// Do the gpu computation
-		gpuCompute.compute();
 
 		// Get compute output in custom uniform
 		waterUniforms['heightmap'].value = gpuCompute.getCurrentRenderTarget(heightmapVariable).texture;

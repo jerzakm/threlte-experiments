@@ -1,6 +1,5 @@
 #include <common>
 uniform vec3[512] objects;
-uniform float mouseSize;
 uniform float intensity;
 
 void main() {
@@ -41,7 +40,7 @@ void main() {
   if(change < 0.25) {
     change *= -1.;
   }
-  float newHeight = (heightmapValue.y) * 0.9995;
+  float newHeight = (heightmapValue.y) * 0.9997;
   newHeight += change;
 
   newHeight = max(-2.5, newHeight);
