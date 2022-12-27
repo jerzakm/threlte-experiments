@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Instance, InstancedMesh, T, Three, useFrame } from '@threlte/core';
-	import type { Mesh } from 'three';
+	import { Instance, InstancedMesh, T, Three, useFrame, useThrelte } from '@threlte/core';
+	import { Mesh } from 'three';
 	import {
 		AnimationMixer,
 		CircleGeometry,
@@ -16,6 +16,7 @@
 	import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 
 	import * as THREE from 'three';
+	// import { SceneUtils } from 'three/examples/jsm/utils/SceneUtils';
 
 	const getVertexPosition = function (skin: SkinnedMesh, index: number) {
 		const skinIndices = new THREE.Vector4().fromBufferAttribute(
@@ -72,10 +73,11 @@
 	let mixer: AnimationMixer;
 
 	const loader = new FBXLoader(loadingManager);
-	const index = 8423;
 
 	let targetArray: Vector3[] = [];
-	let positionArray: [number, number, number][] = [];
+	let vertexPositionArray: [number, number, number][] = [];
+	let bonePreviewHelpers: Mesh[] = [];
+	let bonePreviewHelperPositions: Vector3[] = [];
 
 	let skinnedMesh: SkinnedMesh;
 
@@ -86,10 +88,6 @@
 		object.traverse(function (child: any) {
 			if (child.isSkinnedMesh) {
 				skinnedMesh = child;
-				console.log(skinnedMesh.geometry.attributes.position.count);
-				console.log(skinnedMesh.geometry.attributes.position.count / 4);
-				console.log(skinnedMesh.geometry.attributes.position.count / 8);
-				console.log(skinnedMesh.geometry.attributes.position.count / 12);
 
 				// for (let i = 0; i < skinnedMesh.geometry.attributes.position.count; i++) {
 				// 	let target = new Vector3();
@@ -108,14 +106,32 @@
 		});
 		viking = object;
 		targetArray = targetArray;
-		positionArray = positionArray;
+		vertexPositionArray = vertexPositionArray;
 	});
+
+	const cg = new SphereGeometry(3, 5, 5);
+	const cm = new MeshStandardMaterial({ color: 'white', side: DoubleSide });
+
+	debugMesh = new Mesh(cg, cm);
+
+	const { scene } = useThrelte();
+
+	scene.add(debugMesh);
 
 	$: {
 		if (skinnedMesh && debugMesh) {
+			console.log(skinnedMesh);
+
+			skinnedMesh.material.transparent = true;
+			skinnedMesh.material.opacity = 0.5;
 			const bone = skinnedMesh.skeleton.getBoneByName('LowerLeg_L');
-			console.log(bone);
-			// bone?.add(debugMesh);
+			bone?.add(debugMesh);
+			for (const bone of skinnedMesh.skeleton.bones) {
+				const bonePreviewMesh = new Mesh(cg, cm);
+				bone.add(bonePreviewMesh);
+				bonePreviewHelpers.push(bonePreviewMesh);
+				bonePreviewHelperPositions.push(new Vector3(0));
+			}
 		}
 	}
 
@@ -123,14 +139,19 @@
 
 	useFrame(({ clock }) => {
 		tempCounter++;
+		// console.log(debugMesh.getWorldPosition(new Vector3()));
 		if (mixer) {
+			for (let i = 0; i < bonePreviewHelpers.length; i++) {
+				// bonePreviewHelpers[i].getWorldPosition(bonePreviewHelperPositions[i]);
+			}
+			// bonePreviewHelperPositions = bonePreviewHelperPositions;
 			mixer.update(0.005);
-			const mod = 24;
+			const mod = 36;
 			if (skinnedMesh && tempCounter % 5 == 0) {
 				for (let i = 0; i < skinnedMesh.geometry.attributes.position.count; i++) {
 					if (skinnedMesh.geometry.attributes.position.count % mod == 0) {
 						const r = getVertexPosition(skinnedMesh, i).multiply(new Vector3(0.01, 0.01, 0.01));
-						positionArray[i / mod] = r.toArray();
+						vertexPositionArray[i / mod] = r.toArray();
 					}
 				}
 				for (let i = 0; i < targetArray.length; i++) {
@@ -146,22 +167,17 @@
 			}
 		}
 	});
-
-	const cg = new SphereGeometry(0.015, 5, 5);
-	const cm = new MeshStandardMaterial({ color: 'white', side: DoubleSide });
 </script>
 
-<T.Mesh {position} material={cm} geometry={cg} bind:ref={debugMesh} />
+<!-- <T.Mesh {position} material={cm} geometry={cg} bind:ref={debugMesh} scale={[50, 50, 50]} /> -->
 
 {#if viking}
 	<Three type={viking} {position} bind:ref={vikingThree} scale={1} />
 {/if}
 
 <T.Group rotation={[0, 0, 0]} position={[1, 0, 0]}>
-	<InstancedMesh material={cm} geometry={cg}>
-		{#each positionArray as position, i}
-			<!-- <T.Mesh {position} material={cm} geometry={cg} /> -->
-
+	<!-- <InstancedMesh material={cm} geometry={cg}>
+		{#each vertexPositionArray as position, i}
 			<Instance
 				position={{
 					x: position[0],
@@ -170,5 +186,5 @@
 				}}
 			/>
 		{/each}
-	</InstancedMesh>
+	</InstancedMesh> -->
 </T.Group>
